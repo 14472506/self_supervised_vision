@@ -1,45 +1,74 @@
-"""
-Details
-"""
-# imports
-# --- general
-import os
-from PIL import Image
-import matplotlib.pyplot as plt
-# --- torch
+# loadinging and nomalizing dataset
 import torch
-import torchvision.transforms as transforms
-# --- package_files
-from collators import RotationCollator
+import torchvision
+import torchvision.transforms as transforms 
 
-# --- functions
-transform = transforms.Compose([transforms.ToTensor()])
+from datasets import RotationDataset
 
-def tensor2PIL(torch_img):
-    return transforms.ToPILImage()(torch_img.squeeze(0))
+transfrom = transforms.Compose(
+    [transforms.ToTensor(),
+     transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5))]
+)
 
-# dev 
-# --- loading image
-path_to_image = "jersey_royals/08.JPG"
-img = Image.open(path_to_image).convert('RGB')
-#plt.imshow(img)
+batch_size = 1
 
-# --- getting torch image
-torch_img = transform(img).unsqueeze(0)
-#plt.imshow(tensor2PIL(torch_img))
-#plt.show()
+trainset = RotationDataset(root = "./jersey_royals")
+trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
+                                          shuffle=True, num_workers=2)
+                                        
+#import matplotlib.pyplot as plt
 
-# --- rotation collator
-fig, ax = plt.subplots(1, 4, figsize=(20, 20))
-
-collator = RotationCollator(num_rotations=4, rotation_procedure='random')
-x, y = collator([[torch_img.squeeze(0), -1]])
-
-print(x)
-print(y)
-
-#for i in range(x.shape[0]):
-#    ax[i].set_title('r$y=%d$' % y[i])
-#    ax[i].imshow(tensor2PIL(x[i]))
+#import numpy as np 
 #
-#plt.show()
+#def imshow(img):
+#    img = img/2+0.5
+#    npimp = img.numpy()
+#    plt.imshow(np.transpose(npimp, (1 ,2 ,0)))
+#    plt.show()
+#
+#dataiter = iter(trainloader)
+#images, labels = dataiter.next()
+#
+#imshow(torchvision.utils.make_grid(images))
+#print(" ".join(f'{classes[labels[j]]:5s}' for j in range(batch_size)))
+
+# defining model
+from torchvision.models import resnet50, ResNet50_Weights
+import torch.nn as nn
+model = resnet50(weights=ResNet50_Weights.DEFAULT)
+num_feautes = model.fc.in_features
+model.fc = nn.Linear(num_feautes, 4)
+
+# Define loss
+import torch.optim as optim
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(model.parameters(), lr = 0.001, momentum = 0.9)
+
+# train network
+for epoch in range(2):
+
+    running_loss = 0.0
+    for i, data in enumerate(trainloader, 0):
+
+        print(data)
+    
+        # get data
+        input, labels = data
+        
+        # set param gradient to zero
+        optimizer.zero_grad()
+        
+        # forward + backward + optimizer
+        outputs = model(input)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        
+        # printing stats
+        running_loss += loss.item()
+        if i % 2000 == 1999: # printing every 200 minibatches
+            print(f"[{epoch + 1}, {i +  1:5d}] loss: {running_loss / 2000:.3f}")
+            running_loss = 0
+
+print("finished training")
