@@ -30,11 +30,14 @@ class Training_loop():
         """
         Details
         """
+        # setup
+        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
         # data location
         self.root = "./jersey_royals"
         
         # train dataset config
-        self.train_batch_size = 4
+        self.train_batch_size = 2
         self.train_shuffle = True
         self.train_workers = 2
         self.train_augs = training_augmentations
@@ -50,9 +53,7 @@ class Training_loop():
 
         # getting model
         self.model = resnet50_rotation_classifier(pre_trained=True, num_rotations=4)
-
-        # getting loss function
-        self.loss = classification_loss()
+        self.model.to(self.device)
 
         # optimizer config
         self.learning_rate = 0.001
@@ -94,6 +95,7 @@ class Training_loop():
         """
         Detials
         """
+        self.model.train()
         for epoch in range(self.epochs):
             
             # initialising running loss
@@ -102,13 +104,14 @@ class Training_loop():
                 
                 # get data from loader
                 input, labels = data
+                input, labels = input.to(self.device), labels.to(self.device)
 
                 # set param gradient to zero
                 self.optimizer.zero_grad()
 
                 # forward + backward + optimizer
                 output = self.model(input)
-                loss = self.loss(output, labels)
+                loss = classification_loss(output, labels)
                 loss.backward()
                 self.optimizer.step()
 
