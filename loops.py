@@ -29,11 +29,14 @@ class Training_loop():
         """
         Details
         """
+        # setup
+        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+
         # data location
         self.root = "./jersey_royals"
         
         # train dataset config
-        self.train_batch_size = 4
+        self.train_batch_size = 2
         self.train_shuffle = True
         self.train_workers = 2
 
@@ -47,9 +50,7 @@ class Training_loop():
 
         # getting model
         self.model = resnet50_rotation_classifier(pre_trained=True, num_rotations=4)
-
-        # getting loss function
-        self.loss = classification_loss()
+        self.model.to(self.device)
 
         # optimizer config
         self.learning_rate = 0.001
@@ -57,7 +58,8 @@ class Training_loop():
         self.optimizer_init()
 
         #loop config
-        self.loop_epochs = 10
+        self.epochs = 10
+        self.loop()
 
 
     def load_dataset(self, train=False, validation=False, test=False):
@@ -88,6 +90,7 @@ class Training_loop():
         """
         Detials
         """
+        self.model.train()
         for epoch in range(self.epochs):
             
             # initialising running loss
@@ -96,20 +99,21 @@ class Training_loop():
                 
                 # get data from loader
                 input, labels = data
+                input, labels = input.to(self.device), labels.to(self.device)
 
                 # set param gradient to zero
                 self.optimizer.zero_grad()
 
                 # forward + backward + optimizer
                 output = self.model(input)
-                loss = self.loss(output, labels)
+                loss = classification_loss(output, labels)
                 loss.backward()
                 self.optimizer.step()
 
                 # printing stats
                 running_loss += loss.item()
-                if i % 2000 == 1999: # printing every 200 minibatches
-                    print(f"[{epoch + 1}, {i +  1:5d}] loss: {running_loss / 2000:.3f}")
+                if i % 20 == 19: # printing every 200 minibatches
+                    print(f"[{epoch + 1}, {i +  1:5d}] loss: {running_loss / 20:.3f}")
                     running_loss = 0
         
         # training complete
