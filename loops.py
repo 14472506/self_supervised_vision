@@ -72,7 +72,8 @@ class Training_loop():
         Detials
         """
         if train == True:
-            self.train_set = RotationDataset(root=self.root)
+            self.train_set = RotationDataset(root=self.root,
+                                             transform=training_augmentations)
             self.train_loader = torch.utils.data.DataLoader(self.train_set,
                                                             batch_size = self.train_batch_size,
                                                             shuffle = self.train_shuffle,
