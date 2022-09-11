@@ -16,6 +16,7 @@ import torch.optim as optim
 from models import resnet50_rotation_classifier
 from losses import classification_loss
 from datasets import RotationDataset
+from transforms import training_augmentations, validation_augmentations
 
 # =============================================================================================== #
 # Classes
@@ -36,11 +37,13 @@ class Training_loop():
         self.train_batch_size = 4
         self.train_shuffle = True
         self.train_workers = 2
+        self.train_augs = training_augmentations
 
         # test dataset config
         self.test_batch_size = 1
         self.test_shuffle = False
         self.test_workers = 1
+        self.val_augs = validation_augmentations
 
         # loading dataset
         self.load_dataset(train=True)
@@ -57,7 +60,10 @@ class Training_loop():
         self.optimizer_init()
 
         #loop config
+        self.epochs = 10
+        self.print_freque = 20
         self.loop_epochs = 10
+        self.loop()
 
 
     def load_dataset(self, train=False, validation=False, test=False):
@@ -108,8 +114,8 @@ class Training_loop():
 
                 # printing stats
                 running_loss += loss.item()
-                if i % 2000 == 1999: # printing every 200 minibatches
-                    print(f"[{epoch + 1}, {i +  1:5d}] loss: {running_loss / 2000:.3f}")
+                if i % self.print_freque == self.print_freque-1: # printing every 200 minibatches
+                    print(f"[{epoch + 1}, {i + 1:5d}] loss: {running_loss/self.print_freque:.3f}")
                     running_loss = 0
         
         # training complete
