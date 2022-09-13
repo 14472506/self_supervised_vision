@@ -30,7 +30,7 @@ class Training_loop():
     def
     """
 
-    def __init__(self, seed=42):
+    def __init__(self, cd, seed=42):
         """
         Details
         """
@@ -40,23 +40,23 @@ class Training_loop():
         self.seed = seed
 
         # experiment data setup
-        self.experiment_name = "test_1"
+        self.experiment_name = cd['EXPERIMENT_NAME']
         self.exp_dir = "outputs/" + self.experiment_name
         make_dir(self.exp_dir)
 
         # data location
-        self.root = "./jersey_royals"
+        self.root = cd['DATASET']['ROOT']
         
         # train dataset config
-        self.train_batch_size = 32
-        self.train_shuffle = True
-        self.train_workers = 8
+        self.train_batch_size = cd['DATASET']['TRAIN']['BATCH_SIZE']
+        self.train_shuffle = cd['DATASET']['TRAIN']['SHUFFLE']
+        self.train_workers = cd['DATASET']['TRAIN']['WORKERS']
         self.train_augs = training_augmentations()
 
         # test dataset config
-        self.val_batch_size = 1
-        self.val_shuffle = False
-        self.val_workers = 1
+        self.val_batch_size = cd['DATASET']['TEST']['BATCH_SIZE']
+        self.val_shuffle = cd['DATASET']['TEST']['SHUFFLE']
+        self.val_workers = cd['DATASET']['TEST']['WORKERS']
         self.setup_augs = setup_augmentations()
 
         # ----- training loop methods config and call ------------------------------------------- #
@@ -67,19 +67,19 @@ class Training_loop():
         self.load_dataset()
 
         # getting model
-        self.model = resnet50_rotation_classifier(pre_trained=True, num_rotations=4)
+        self.model = resnet50_rotation_classifier(pre_trained=cd['MODEL']['PRE_TRAINED'],
+                                                  num_rotations=cd['MODEL']['NUM_ROTATIONS'])
         self.model.to(self.device)
 
         # optimizer config
-        self.learning_rate = 0.001
-        self.momentum = 0.9
+        self.learning_rate = cd['OPTIMIZER']['LEARNING_RATE']
+        self.momentum = cd['OPTIMIZER']['MOMENTUM']
         self.optimizer_init()
 
         #loop config
-        self.start_epoch = 0
-        self.epochs = 10
-        self.print_freque = 2
-        self.loop_epochs = 10
+        self.start_epoch = cd['LOOP']['STARTING_EPOCH']
+        self.epochs = cd['LOOP']['EPOCHS']
+        self.print_freque = cd['LOOP']['PRINT_FREQ']
         self.loop()
 
 
@@ -151,6 +151,9 @@ class Training_loop():
         """
         Detials
         """
+        # best model tracker initialised and arbitrary high val 
+        best_model = 100 
+
         # loop through epoch range
         for epoch in range(self.start_epoch, self.epochs, 1):
             
@@ -160,13 +163,16 @@ class Training_loop():
             # run validation on one one epoch
             epoch_val_loss = self.val_one_epoch()
 
-            # save last model
+            # save last model 
             model_saver(epoch, self.model, self.optimizer, self.exp_dir, "last_model.pth")
+
+            # saving best model
+            if epoch_val_loss < best_model:
+                model_saver(epoch, self.model, self.optimizer, self.exp_dir, "best_model.pth") 
 
             # carry out model saving
             print("training results: ", epoch_train_loss, "val results: ", epoch_val_loss)
 
-        
         # training complete
         print("training finished")
 

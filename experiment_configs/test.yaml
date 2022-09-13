@@ -1,0 +1,32 @@
+# Detials
+
+# setup params
+EXPERIMENT_NAME: test_1
+
+# dataset config
+DATASET:
+  ROOT: ./jersey_royals
+  TRAIN:
+    BATCH_SIZE: 16
+    SHUFFLE: TRUE
+    WORKERS: 8
+  TEST:
+    BATCH_SIZE: 1
+    SHUFFLE: FALSE
+    WORKERS: 1
+
+# model config
+MODEL:
+  PRE_TRAINED: TRUE
+  NUM_ROTATIONS: 4
+
+# optimizer config
+OPTIMIZER:
+  LEARNING_RATE: 0.001
+  MOMENTUM: 0.9
+
+# training loop
+LOOP:
+  STARTING_EPOCH: 0
+  EPOCHS: 10
+  PRINT_FREQ: 2
