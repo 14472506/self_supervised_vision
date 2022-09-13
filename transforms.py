@@ -9,7 +9,7 @@ import torchvision
 
 from torch import Tensor, nn
 import albumentations as A
-from albumentations.pytorch import ToTensorV2
+from albumentations.pytorch.transforms import ToTensorV2
 
 # =============================================================================================== #
 # Augmentations
@@ -49,3 +49,13 @@ def training_augmentations(resize=(720, 1280), crop_size=(310, 426)):
     return augs
     
 
+def setup_augmentations(resize=(720, 1280)):
+    """
+    Detials
+    """
+    augs = A.Compose([
+        A.Resize(*resize),
+        A.Normalize(),
+        ToTensorV2()
+        ])
+    return augs
