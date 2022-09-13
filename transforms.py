@@ -9,10 +9,22 @@ import torchvision
 
 from torch import Tensor, nn
 import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 # =============================================================================================== #
 # Augmentations
 # =============================================================================================== #
+def setup_augmentations(resize=(720, 1280)):
+    """
+    Detials
+    """
+    augs = A.Compose([
+        A.Resize(*resize),
+        A.Normalize(),
+        ToTensorV2(),
+        ])
+    return augs
+
 def training_augmentations(resize=(720, 1280), crop_size=(310, 426)):
     """
     Detials
@@ -31,17 +43,9 @@ def training_augmentations(resize=(720, 1280), crop_size=(310, 426)):
                                      val_shift_limit=0.2, p=0.9),
                 A.RandomBrightnessContrast(brightness_limit=0.2, 
                                            contrast_limit=0.2, p=0.9),
-            ],p=0.9)
+            ],p=0.9),
+        ToTensorV2()
         ])
     return augs
     
 
-def validation_augmentations(resize=(720, 1280)):
-    """
-    Detials
-    """
-    augs = A.Compose([
-        A.Resize(*resize),
-        A.Normalize(),
-        ])
-    return augs
