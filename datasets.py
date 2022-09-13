@@ -45,7 +45,8 @@ class RotationDataset(data.Dataset):
 
         # further augmentation capability here
         if self.transforms != None:
-            transformed = self.transforms(image=img)
+            np_img = np.array(img)
+            transformed = self.transforms(image=np_img)
             torch_img = transformed['image']
         else:
             transform = T.Compose([T.ToTensor()])
@@ -107,7 +108,13 @@ class TrainAugMapper(torch.utils.data.Dataset):
         """
         Detials
         """
-        return self.map(self.dataset[idx])
+        image, label = self.dataset[idx]
+
+        print("###############")
+        print(image)
+
+        print(dave)
+
 
     def __len__(self):
         """

@@ -51,7 +51,7 @@ class Training_loop():
         self.val_batch_size = 1
         self.val_shuffle = False
         self.val_workers = 1
-        self.setup_augs = setup_augmentations
+        self.setup_augs = setup_augmentations()
 
         # ----- training loop methods config and call ------------------------------------------- #
         # set random seed
@@ -115,22 +115,22 @@ class Training_loop():
         # get train and validation dataset
         train_size = int(len(self.base_set)*split_percentage)
         val_size = len(self.base_set) - train_size
-        train_base, self.val_set = torch.utils.data.random_split(self.base_set, [train_size, val_size])
-        train_set = TrainAugMapper(train_base, self.train_augs)
+        self.train_set, self.val_set = torch.utils.data.random_split(self.base_set, [train_size, val_size])
+        #self.train_set = TrainAugMapper(train_base, self.train_augs)
         
         self.train_loader = torch.utils.data.DataLoader(self.train_set,
                                                         batch_size = self.train_batch_size,
                                                         shuffle = self.train_shuffle,
                                                         num_workers = self.train_workers,
                                                         worker_init_fn = seed_worker,
-                                                        gen = gen)
+                                                        generator = gen)
         
         self.val_loader = torch.utils.data.DataLoader(self.val_set,
                                                         batch_size = self.val_batch_size,
                                                         shuffle = self.val_shuffle,
                                                         num_workers = self.val_workers,
                                                         worker_init_fn = seed_worker,
-                                                        gen = gen)
+                                                        generator = gen)
 
     
     def optimizer_init(self):
@@ -149,7 +149,7 @@ class Training_loop():
         for epoch in range(self.start_epoch, self.epochs, 1):
             
             # run training on one epoch
-            epoch_train_loss = self.train_one_epoch()
+            epoch_train_loss = self.train_one_epoch(epoch)
 
             # run validation on one one epoch
             epoch_val_loss = self.val_one_epoch()
@@ -161,7 +161,7 @@ class Training_loop():
         print("training finished")
 
     
-    def train_one_epoch(self):
+    def train_one_epoch(self, epoch):
         """
         Detials
         """
@@ -184,6 +184,7 @@ class Training_loop():
 
             # forward + backward + optimizer
             output = self.model(input)
+            print(output)
             loss = classification_loss(output, labels)
             loss.backward()
             self.optimizer.step()
