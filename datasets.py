@@ -33,7 +33,7 @@ class RotationDataset(data.Dataset):
 
         self.transforms = transforms
         self.rotation_degrees = np.linspace(0, 360, num_rotations + 1).tolist()[:-1]
-        self.seed = seed
+        np.random.seed(seed)
 
 
     def __getitem__(self, idx):
@@ -44,7 +44,7 @@ class RotationDataset(data.Dataset):
         img = Image.open(image_path).convert("RGB")
 
         # further augmentation capability here
-        if self.transforms != None:
+        if self.transforms:
             np_img = np.array(img)
             transformed = self.transforms(image=np_img)
             torch_img = transformed['image']
@@ -52,7 +52,6 @@ class RotationDataset(data.Dataset):
             transform = T.Compose([T.ToTensor()])
             torch_img = transform(img)
 
-        np.random.seed(self.seed)
         theta = np.random.choice(self.rotation_degrees, size=1)[0]
         out_img = self.rotate_image(torch_img.unsqueeze(0), theta=theta).squeeze(0)
         label = torch.tensor(self.rotation_degrees.index(theta)).long()
@@ -97,12 +96,12 @@ class TrainAugMapper(torch.utils.data.Dataset):
     """
     Detials
     """
-    def __init__(self, dataset, mapper):
+    def __init__(self, dataset, transforms):
         """
         Detials
         """
         self.dataset = dataset
-        self.map = mapper
+        self.transforms = transforms
 
     def __getitem__(self, idx):
         """
@@ -110,10 +109,13 @@ class TrainAugMapper(torch.utils.data.Dataset):
         """
         image, label = self.dataset[idx]
 
-        print("###############")
-        print(image)
-
-        print(dave)
+        pil_trans = T.ToPILImage()
+        pil = pil_trans(image)
+        np_img = np.array(pil)
+        transformed = self.transforms(image=np_img)
+        image = transformed['image']
+     
+        return(image, label)
 
 
     def __len__(self):

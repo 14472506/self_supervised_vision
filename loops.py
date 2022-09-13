@@ -20,6 +20,7 @@ from models import resnet50_rotation_classifier
 from losses import classification_loss
 from datasets import RotationDataset, TrainAugMapper
 from transforms import training_augmentations, setup_augmentations
+from utils import make_dir, model_saver
 
 # =============================================================================================== #
 # Classes
@@ -38,14 +39,19 @@ class Training_loop():
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.seed = seed
 
+        # experiment data setup
+        self.experiment_name = "test_1"
+        self.exp_dir = "outputs/" + self.experiment_name
+        make_dir(self.exp_dir)
+
         # data location
         self.root = "./jersey_royals"
         
         # train dataset config
-        self.train_batch_size = 2
+        self.train_batch_size = 32
         self.train_shuffle = True
-        self.train_workers = 2
-        self.train_augs = training_augmentations
+        self.train_workers = 8
+        self.train_augs = training_augmentations()
 
         # test dataset config
         self.val_batch_size = 1
@@ -72,7 +78,7 @@ class Training_loop():
         #loop config
         self.start_epoch = 0
         self.epochs = 10
-        self.print_freque = 20
+        self.print_freque = 2
         self.loop_epochs = 10
         self.loop()
 
@@ -115,8 +121,8 @@ class Training_loop():
         # get train and validation dataset
         train_size = int(len(self.base_set)*split_percentage)
         val_size = len(self.base_set) - train_size
-        self.train_set, self.val_set = torch.utils.data.random_split(self.base_set, [train_size, val_size])
-        #self.train_set = TrainAugMapper(train_base, self.train_augs)
+        train_base, self.val_set = torch.utils.data.random_split(self.base_set, [train_size, val_size])
+        self.train_set = TrainAugMapper(train_base, self.train_augs)
         
         self.train_loader = torch.utils.data.DataLoader(self.train_set,
                                                         batch_size = self.train_batch_size,
@@ -154,7 +160,11 @@ class Training_loop():
             # run validation on one one epoch
             epoch_val_loss = self.val_one_epoch()
 
+            # save last model
+            model_saver(epoch, self.model, self.optimizer, self.exp_dir, "last_model.pth")
+
             # carry out model saving
+            print("training results: ", epoch_train_loss, "val results: ", epoch_val_loss)
 
         
         # training complete
@@ -177,6 +187,7 @@ class Training_loop():
                 
             # get data from loader and send it to device
             input, labels = data
+            input = input.float()
             input, labels = input.to(self.device), labels.to(self.device)
 
             # set param gradient to zero
@@ -184,7 +195,6 @@ class Training_loop():
 
             # forward + backward + optimizer
             output = self.model(input)
-            print(output)
             loss = classification_loss(output, labels)
             loss.backward()
             self.optimizer.step()
