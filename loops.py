@@ -45,7 +45,7 @@ class Training_loop():
         self.train_batch_size = 2
         self.train_shuffle = True
         self.train_workers = 2
-        self.train_augs = training_augmentations()
+        self.train_augs = training_augmentations
 
         # test dataset config
         self.val_batch_size = 1
