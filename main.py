@@ -12,8 +12,7 @@ import yaml
 # =============================================================================================== #
 def main():
     # defining list of experiments    
-    exp_list = ["experiment_configs/test.yaml",
-                "experiment_configs/test2.yaml"]
+    exp_list = ["experiment_configs/Adam5e-5_bs8_40ep.yaml"]
 
     # looping through experiments list calling loop_train
     for exp in exp_list:

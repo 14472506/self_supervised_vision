@@ -1,19 +1,29 @@
 # Detials
 
 # setup params
-EXPERIMENT_NAME: test_1
+EXPERIMENT_NAME: Train_test1
 
 # dataset config
 DATASET:
-  ROOT: ./jersey_royals
+  ROOT: ./data/jersey_royals_ssl_ds
   TRAIN:
-    BATCH_SIZE: 16
+    BATCH_SIZE: 8
     SHUFFLE: TRUE
     WORKERS: 8
+  VAL:
+    BATCH_SIZE: 1
+    SHUFFLE: FALSE
+    WORKERS: 1
   TEST:
     BATCH_SIZE: 1
     SHUFFLE: FALSE
     WORKERS: 1
+
+TRANSFORMS:
+  MIN: 540
+  MAX: 960
+  CROP_MIN: 540
+  CROP_MAX: 960
 
 # model config
 MODEL:
@@ -22,11 +32,13 @@ MODEL:
 
 # optimizer config
 OPTIMIZER:
-  LEARNING_RATE: 0.001
-  MOMENTUM: 0.9
+  NAME: "Adam"
+  PARAMS:
+    - 0.00005
+
 
 # training loop
 LOOP:
   STARTING_EPOCH: 0
-  EPOCHS: 10
-  PRINT_FREQ: 2
+  EPOCHS: 1
+  PRINT_FREQ: 5
