@@ -29,16 +29,16 @@ for key, val in results_dicts.items():
     count += 1
     ax.plot(epochs, val["train_loss"], label = "training_total", color = "#0000FF")
     ax.plot(epochs, val["val_loss"], label = "val_total", color = "#EE4B2B")
-    #ax.scatter(val["best_epoch"][-1], val["best_epoch"][-1], c = "g", marker = "o")
+    ax.scatter(val["best_epoch"][-1], val["best_loss"][-1], c = "g", marker = "o")
 
     ax.set_xlabel("Number of Epochs")
     ax.set_ylabel("Loss Value")
 
     plt.title(key)
-    #best_label = str(round(val["best_mAP"][-1], 3)) + " @ " + str(val["best_epoch"][-1])
-    #plt.annotate(best_label, (val["best_epoch"][-1], val["best_mAP"][-1]))
+    best_label = str(round(val["best_loss"][-1], 3)) + " @ " + str(val["best_epoch"][-1])
+    plt.annotate(best_label, (val["best_epoch"][-1], val["best_loss"][-1]))
     #step_label = str(round(val["step_mAP"][0], 3)) + " @ " + str(val["step_epoch"][0])
     #plt.annotate(step_label, (val["step_epoch"][0], val["step_mAP"][0]))
 
-#figure.legend(loc="upper right")
+figure.legend(loc="upper right")
 plt.show()
