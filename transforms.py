@@ -9,39 +9,46 @@ import torchvision
 
 from torch import Tensor, nn
 import albumentations as A
+from albumentations.pytorch.transforms import ToTensorV2
 
 # =============================================================================================== #
 # Augmentations
 # =============================================================================================== #
-def training_augmentations(resize=(720, 1280), crop_size=(310, 426)):
+def setup_augmentations(resize=(720, 1280)):
     """
     Detials
     """
     augs = A.Compose([
-        # standard
         A.Resize(*resize),
-        A.RandomCrop(*crop_size),
         A.Normalize(),
-
-        # aditional augmentations
-        A.ToGray(p=0.05),
-        A.HorizontalFlip(p=0.5),
-        A.OneOf([
-                A.HueSaturationValue(hue_shift_limit=0.2, sat_shift_limit= 0.2, 
-                                     val_shift_limit=0.2, p=0.9),
-                A.RandomBrightnessContrast(brightness_limit=0.2, 
-                                           contrast_limit=0.2, p=0.9),
-            ],p=0.9)
+        ToTensorV2(),
         ])
     return augs
-    
 
-def validation_augmentations(resize=(720, 1280)):
+def training_augmentations(resize=(720, 1280), crop_size=(720, 1280)):
     """
     Detials
     """
     augs = A.Compose([
-        A.Resize(*resize),
         A.Normalize(),
-        ])
+        A.OneOf([
+            A.RandomCrop(*crop_size, p=0.33),
+            A.Resize(*resize, p=0.66)
+            ], p=1),
+        A.Downscale (scale_min=0.25,
+                     scale_max=0.25,
+                     interpolation=None,
+                     p=0.1),
+        A.OneOf([
+            A.HueSaturationValue(hue_shift_limit=0.2,
+                                 sat_shift_limit= 0.2, 
+                                 val_shift_limit=0.2, 
+                                 p=0.9),
+            A.RandomBrightnessContrast(brightness_limit=0.2, 
+                                       contrast_limit=0.2,
+                                       p=0.9),
+            ],p=0.2),
+        A.ToGray(p=0.1),
+        ToTensorV2()
+        ], p=1)
     return augs

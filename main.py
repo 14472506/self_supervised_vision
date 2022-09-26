@@ -5,9 +5,30 @@ Detials
 # Imports
 # =============================================================================================== #
 from loops import Training_loop
+import yaml
+
+# =============================================================================================== #
+# Main
+# =============================================================================================== #
+def main():
+    # defining list of experiments    
+    exp_list = ["experiment_configs/Adam5e-5_bs8_40ep.yaml"]
+
+    # looping through experiments list calling loop_train
+    for exp in exp_list:
+
+        print("running experiment: ", exp)
+
+        with open(exp, "r") as data:
+            try: 
+                config_dict = yaml.safe_load(data)
+            except yaml.YAMLError as exc:
+                print(exc)
+    
+        Training_loop(cd = config_dict) 
 
 # =============================================================================================== #
 # Execution
 # =============================================================================================== #
 if __name__ == "__main__":
-    Training_loop() 
+    main()   

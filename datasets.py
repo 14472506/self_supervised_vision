@@ -22,7 +22,7 @@ class RotationDataset(data.Dataset):
     """
     detials of class
     """
-    def __init__(self, root, num_rotations=4, split=None, transform=None):
+    def __init__(self, root, num_rotations=4, transforms=None, seed=42):
         """
         Detials on init
         """
@@ -31,8 +31,10 @@ class RotationDataset(data.Dataset):
         for file in os.listdir(self.root):
             self.image_files.append(file)
 
+        self.transforms = transforms
         self.rotation_degrees = np.linspace(0, 360, num_rotations + 1).tolist()[:-1]
-    
+        np.random.seed(seed)
+
 
     def __getitem__(self, idx):
         """
@@ -42,9 +44,13 @@ class RotationDataset(data.Dataset):
         img = Image.open(image_path).convert("RGB")
 
         # further augmentation capability here
-
-        transform = T.Compose([T.ToTensor()])
-        torch_img = transform(img)
+        if self.transforms:
+            np_img = np.array(img)
+            transformed = self.transforms(image=np_img)
+            torch_img = transformed['image']
+        else:
+            transform = T.Compose([T.ToTensor()])
+            torch_img = transform(img)
 
         theta = np.random.choice(self.rotation_degrees, size=1)[0]
         out_img = self.rotate_image(torch_img.unsqueeze(0), theta=theta).squeeze(0)
@@ -85,6 +91,38 @@ class RotationDataset(data.Dataset):
         return torch.tensor([[torch.cos(theta), -torch.sin(theta), 0],
                              [torch.sin(theta), torch.cos(theta), 0]])
 
+
+class TrainAugMapper(torch.utils.data.Dataset):
+    """
+    Detials
+    """
+    def __init__(self, dataset, transforms):
+        """
+        Detials
+        """
+        self.dataset = dataset
+        self.transforms = transforms
+
+    def __getitem__(self, idx):
+        """
+        Detials
+        """
+        image, label = self.dataset[idx]
+
+        pil_trans = T.ToPILImage()
+        pil = pil_trans(image)
+        np_img = np.array(pil)
+        transformed = self.transforms(image=np_img)
+        image = transformed['image']
+     
+        return(image, label)
+
+
+    def __len__(self):
+        """
+        Details
+        """
+        return len(self.dataset)
 
 #if __name__ == "__main__":
 #    Rot = RotationDataset("/home/bradley/workspace/self_supervised_vision/jersey_royals")
