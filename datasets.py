@@ -9,7 +9,7 @@ import numpy as np
 import os
 from PIL import Image
 import itertools
-import tqmd
+import tqdm
 
 #import torchnet as tnt
 import torch
@@ -132,28 +132,78 @@ class TrainAugMapper(torch.utils.data.Dataset):
 #    print(x, y)
 
 
-class JigsawDataset(data.Datasets):
+class JigsawDataset(data.Dataset):
     """
     Detials
     """
 
-    def __init__(self,  num_tiles=9, num_permutations=1000, permgen_method='maximal',
+    def __init__(self, root, num_tiles=9, num_permutations=1000, permgen_method='maximal',
                  grayscale_probability=0.3, buffer=True, jitter=True, normalization=True):
         """
         Detials
         """
+        # image file path and image list
+        self.root = os.path.expanduser(root)
+        self.image_files = []
+        for file in os.listdir(self.root):
+            self.image_files.append(file)
+
+        # number of tiles and permutations
         self.num_tiles = num_tiles
         self.num_permutations = num_permutations
+        self.perm_method = permgen_method
+        
+        # buffer for image processing
+        self.buffer = buffer
 
-    def __call__(self, examples):
+        # image modification
+        self.grayscale_probability = grayscale_probability
+        self.jitter = jitter
+        self.normalize = normalization
+
+    def __getitem__(self, idx):
         """
         Detials
         """
-        batch =  self._preprocess_batch(examples)
-        x, _ = batch
+        # load images from index
+        image_path =  os.path.join(self.root, self.image_files[idx])
+        img = Image.open(image_path).convert("RGB")
         
-        # will need to address this
-        assert img_height == img_width
+        # chack size and resize if needs be 
+        img_width, img_height = img.size
+
+        # if sizes do not match
+        if img_width != img_height:
+
+            # find max and min dimension    
+            wh_idx = [img_width, img_height]
+            min_dim = min(wh_idx)
+            max_dim = max(wh_idx)
+
+            # get crop dims 
+            delta = max_dim - min_dim
+            min_crop = delta/2
+            max_crop = max_dim - min_crop
+
+            # get min side index
+            min_idx = wh_idx.index(min_dim)
+
+            # configuring crop window depending on min dim index
+            if min_idx == 0: 
+                left = 0
+                top = min_crop
+                right = min_dim 
+                bottom = max_crop
+            elif min_idx == 1:
+                left = min_crop
+                top = 0
+                right = max_crop
+                bottom = min_dim
+
+            # cropping image to square
+            img = img.crop((left, top, right, bottom))
+            
+            img_width, img_height = img.size
 
         # gray scale goes here if gray scale is applied
         # GRAY SCALE
@@ -161,10 +211,13 @@ class JigsawDataset(data.Datasets):
         # compute tile lengths and exract tiles
         tiles = []
         num_tiles_per_dimension = int(np.sqrt(self.num_tiles))
-        tile_lenght = img_width // num_permutations
+        tile_length = img_width // self.num_permutations
 
-        buffer = int(tile_lenght * 0.1)
+        buffer = int(tile_length * 0.1)
+        
+        print(buffer, tiles, num_tiles_per_dimension, tile_length)
 
+        """
         # entering set of loops to go through both dimensions of image
         for i in range(num_tiles_per_dimension):
             for j in range(num_tiles_per_dimension):
@@ -215,6 +268,13 @@ class JigsawDataset(data.Datasets):
         y = torch.tensor(y).long()
 
         return tiles, y 
+        """
+    
+    def __len__(self):
+        """
+        Details
+        """
+        return len(self.image_files)
     
     @staticmethod
     def generate_permutation_set(num_tiles, num_permutations, method="maximal"):
@@ -237,7 +297,7 @@ class JigsawDataset(data.Datasets):
         # uniformly sample out of (num_tiles) indeces to initialise
         current_index = random.randint(0, np.math.factorial(num_tiles) - 1)
 
-        for i in tqmd(range(1, num_permutations +1), desc = "Generating Permutation Set"):
+        for i in tqdm(range(1, num_permutations +1), desc = "Generating Permutation Set"):
             # adding permutations at current index to set
             permutations.append(tuple(all_permutations[:, current_index]))
             # remove current permutations at current index from all permutations
