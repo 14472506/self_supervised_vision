@@ -66,6 +66,7 @@ class RotationCollator(DataCollator):
         batch = self._preprocess_batch(example)
         x, y = batch    
         batch_size = x.shape[0]
+        print(x.shape)
 
         if self.rotation_procedure == 'random':
             for i in range(batch_size):

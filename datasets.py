@@ -9,7 +9,10 @@ import numpy as np
 import os
 from PIL import Image
 import itertools
-import tqdm
+from tqdm import tqdm
+import random
+from scipy.spatial.distance import hamming
+
 
 #import torchnet as tnt
 import torch
@@ -161,6 +164,10 @@ class JigsawDataset(data.Dataset):
         self.jitter = jitter
         self.normalize = normalization
 
+        #self.permutations = self.generate_permutation_set(num_tiles = self.num_tiles,
+        #                                                  num_permutations = self.num_permutations,
+        #                                                  method = self.perm_method)
+
     def __getitem__(self, idx):
         """
         Detials
@@ -169,6 +176,76 @@ class JigsawDataset(data.Dataset):
         image_path =  os.path.join(self.root, self.image_files[idx])
         img = Image.open(image_path).convert("RGB")
         
+        # process image
+        img, img_width, img_height = self.process_image(img)
+
+        # Augmentations
+        transform = T.Compose([T.ToTensor()])
+        torch_img = transform(img)
+
+        img =  torch_img
+    
+        # gray scale goes here if gray scale is applied
+        # GRAY SCALE
+
+        # compute tile lengths and exract tiles
+        tiles = []
+        num_tiles_per_dimension = int(np.sqrt(self.num_tiles))
+        tile_length = img_width // num_tiles_per_dimension 
+ 
+        buffer = int(tile_length * 0.1)
+        
+        # entering set of loops to go through both dimensions of image
+        for i in range(num_tiles_per_dimension):
+            for j in range(num_tiles_per_dimension):
+    
+                if self.buffer:
+                    tile_ij = torch.empty(img.shape[0], 
+                                    tile_length - buffer,
+                                    tile_length - buffer)
+                    buffer_x1, buffer_x2 = np.random.multinomial(buffer, [0.5, 0.5])
+                    buffer_y1, buffer_y2 = np.random.multinomial(buffer, [0.5, 0.5])
+                    tile_x1 = i * tile_length + buffer_x1 
+                    tile_x2 = (i + 1) * tile_length - buffer_x2
+                    tile_y1 = j * tile_length + buffer_y1 
+                    tile_y2 = (j + 1) * tile_length - buffer_y2
+                    tile_ij = img[:, tile_x1: tile_x2, tile_y1: tile_y2]
+                else:
+                    tile_ij = img[:,
+                                i * tile_length: (i + 1) * tile_length,
+                                j * tile_length: (j + 1) * tile_length]
+
+                # random spacial jitter goes here
+                # nomralization goes here
+
+                tiles.append(tile_ij)
+
+        # Tensorising tiles
+        tiles = torch.stack(tiles)
+               
+        # randomly shuffle tiles
+        #y = []
+        #for i in range(1):
+        #    permutation_index = np.random.randint(0, self.num_permutations)
+        #    permutation = torch.tensor(self.permutations[permutation_index])
+        #
+        #    tiles[:, i, :, :] = tiles[permutation, i, :, :]
+        #    y.append(permutation_index)
+        #
+        #y = torch.tensor(y).long()
+
+        return tiles #, y 
+        
+    def __len__(self):
+        """
+        Details
+        """
+        return len(self.image_files)
+
+    def process_image(self, img):
+        """
+        Detials
+        """
         # chack size and resize if needs be 
         img_width, img_height = img.size
 
@@ -200,92 +277,22 @@ class JigsawDataset(data.Dataset):
                 right = max_crop
                 bottom = min_dim
 
-            # cropping image to square
-            img = img.crop((left, top, right, bottom))
-            
-            img_width, img_height = img.size
-
-        # gray scale goes here if gray scale is applied
-        # GRAY SCALE
-
-        # compute tile lengths and exract tiles
-        tiles = []
-        num_tiles_per_dimension = int(np.sqrt(self.num_tiles))
-        tile_length = img_width // self.num_permutations
-
-        buffer = int(tile_length * 0.1)
+        # cropping image to square
+        img = img.crop((left, top, right, bottom))
         
-        print(buffer, tiles, num_tiles_per_dimension, tile_length)
+        img_width, img_height = img.size
 
-        """
-        # entering set of loops to go through both dimensions of image
-        for i in range(num_tiles_per_dimension):
-            for j in range(num_tiles_per_dimension):
-                
-                if self.buffer:
-                    tile_ij = torch.empty(batch_size, x.shape[1], 
-                                    tile_lenght - buffer,
-                                    tile_lenght - buffer)
-                else:
-                    tile_ij = x[:, :,
-                                i * tile_length: (i + 1) * tile_length,
-                                j * tile_length: (j + 1) * tile_length]
-        
-                for k in range(batch_size):
-                    num_channels = tile_ij.shape[1]
-
-                    # leave a random gap between tiles to avoid shortcuts due to edge continuity
-                    if self.buffer:
-
-                        buffer_x1, buffer_x2 = np.random.multinomial(buffer, [0.5, 0.5])
-                        buffer_y1, buffer_y2 = np.random.multinomial(buffer, [0.5, 0.5])
-
-                        tile_x1 = i * tile_lenght + buffer_x1 
-                        tile_y1 = (i + 1) * tile_lenght - buffer_x2
-                        tile_x2 = j * tile_lenght + buffer_y1 
-                        tile_y2 = (j + 1) * tile_lenght - buffer_y2
-
-                        tile_ij[k] = x[k, :, tile_x1: tile_x2, tile_y1: tile_y2]
-
-                    # random spacial jitter goes here
-
-                    # nomralization goes here
-
-                tiles.append(tile_ij)
-        
-        # tensorizing tiles
-        tiles = torch.stack(tiles)
-
-        # randomly shuffle tiles
-        y = []
-        for i in range(batch_size):
-            permutation_index = np.random.randint(0, self.num_permutations)
-            permutation = torch.tensor(self.permutations[permutation_index])
-
-            tiles[:, i, :, :] = tiles[permutation, i, :, :]
-            y.append(permutation_index)
-        
-        y = torch.tensor(y).long()
-
-        return tiles, y 
-        """
-    
-    def __len__(self):
-        """
-        Details
-        """
-        return len(self.image_files)
-    
+        return img, img_width, img_height
+  
     @staticmethod
     def generate_permutation_set(num_tiles, num_permutations, method="maximal"):
         """
         Details
         """ 
-
         if method not in ["maximal", "average", "minimal"]:
             raise ValueError("The specific method=%s is not recoginised!" % method)
 
-        pemutations = []
+        permutations = []
 
         # get all permutations
         tile_positions = list(range(num_tiles))
@@ -297,7 +304,7 @@ class JigsawDataset(data.Dataset):
         # uniformly sample out of (num_tiles) indeces to initialise
         current_index = random.randint(0, np.math.factorial(num_tiles) - 1)
 
-        for i in tqdm(range(1, num_permutations +1), desc = "Generating Permutation Set"):
+        for i in tqdm(range(1, num_permutations + 1), desc='Generating Permutation Set'):
             # adding permutations at current index to set
             permutations.append(tuple(all_permutations[:, current_index]))
             # remove current permutations at current index from all permutations
@@ -313,9 +320,9 @@ class JigsawDataset(data.Dataset):
 
             for j in range(i):
                 for k in range(np.math.factorial(num_tiles) - i):
-                    distances[j, k] = hamming(permutation[j], all_permutations[:, k])
+                    distances[j, k] = hamming(permutations[j], all_permutations[:, k])
             
-            distances = np.matmul(np.ones((1, 1)), distances)
+            distances = np.matmul(np.ones((1, i)), distances)
 
             # choose the next permutation s.t. it maximises objective
             if method == "maximal":
