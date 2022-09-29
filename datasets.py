@@ -141,10 +141,13 @@ class JigsawDataset(data.Dataset):
     """
 
     def __init__(self, root, num_tiles=9, num_permutations=1000, permgen_method='maximal',
-                 grayscale_probability=0.3, buffer=True, jitter=True, normalization=True):
+                 grayscale_probability=0.3, buffer=True, jitter=True, normalization=True, seed=42):
         """
         Detials
         """
+        # setting random seed
+        self.set_seed()
+
         # image file path and image list
         self.root = os.path.expanduser(root)
         self.image_files = []
@@ -167,6 +170,17 @@ class JigsawDataset(data.Dataset):
         #self.permutations = self.generate_permutation_set(num_tiles = self.num_tiles,
         #                                                  num_permutations = self.num_permutations,
         #                                                  method = self.perm_method)
+        self.permutations = [(7, 2, 1, 5, 4, 3, 6, 0, 8),
+                             (0, 1, 2, 3, 5, 4, 7, 8, 6),
+                             (1, 0, 3, 2, 6, 5, 8, 4, 7),
+                             (2, 3, 0, 1, 7, 8, 4, 6, 5),
+                             (3, 4, 5, 0, 8, 6, 1, 7, 2),
+                             (4, 5, 6, 8, 0, 7, 2, 1, 3),
+                             (5, 6, 8, 7, 1, 0, 3, 2, 4),
+                             (6, 8, 7, 4, 2, 1, 5, 3, 0),
+                             (8, 7, 4, 6, 3, 2, 0, 5, 1),
+                             (0, 1, 2, 3, 6, 7, 8, 5, 4)]
+        print(self.permutations)
 
     def __getitem__(self, idx):
         """
@@ -224,17 +238,16 @@ class JigsawDataset(data.Dataset):
         tiles = torch.stack(tiles)
                
         # randomly shuffle tiles
-        #y = []
-        #for i in range(1):
-        #    permutation_index = np.random.randint(0, self.num_permutations)
-        #    permutation = torch.tensor(self.permutations[permutation_index])
-        #
-        #    tiles[:, i, :, :] = tiles[permutation, i, :, :]
-        #    y.append(permutation_index)
-        #
-        #y = torch.tensor(y).long()
+        y = []
+        
+        permutation_index = np.random.randint(0, self.num_permutations)
+        permutation = torch.tensor(self.permutations[permutation_index])
+        tiles[:, :, :, :] = tiles[permutation, :, :, :]
 
-        return tiles #, y 
+        y.append(permutation_index)
+        y = torch.tensor(y).long()
+
+        return tiles, y 
         
     def __len__(self):
         """
@@ -341,3 +354,15 @@ class JigsawDataset(data.Dataset):
         print('Minimum hamming distance is chosen as %0.4f' % min_distance)
 
         return permutations
+    
+    def set_seed(self):
+        """
+        Details
+        """
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+        torch.manual_seed(self.seed)
+        torch.cuda.manual_seed_all(self.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        os.environ['PYTHONHASHSEED'] = str(self.seed)

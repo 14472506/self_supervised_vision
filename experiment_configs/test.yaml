@@ -1,7 +1,7 @@
 # Detials
 
 # setup params
-EXPERIMENT_NAME: Train_test1
+EXPERIMENT_NAME: test
 
 # dataset config
 DATASET:
@@ -40,5 +40,5 @@ OPTIMIZER:
 # training loop
 LOOP:
   STARTING_EPOCH: 0
-  EPOCHS: 1
+  EPOCHS: 40
   PRINT_FREQ: 5

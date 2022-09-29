@@ -19,7 +19,7 @@ import torch.optim as optim
 # model imports
 from models import resnet50_rotation_classifier
 from losses import classification_loss
-from datasets import RotationDataset, TrainAugMapper
+from datasets import RotationDataset, TrainAugMapper, JigsawDataset
 from transforms import training_augmentations, setup_augmentations
 from utils import make_dir, model_saver
 
@@ -144,7 +144,10 @@ class Training_loop():
         gen.manual_seed(seed)
 
         # get base dataset
-        self.base_set = RotationDataset(root=self.root, seed=self.seed)
+        #self.base_set = RotationDataset(root=self.root, seed=self.seed)
+        self.base_set = JigsawDataset(root=self.root,
+                                      num_tiles=9,
+                                      num_permutations=10)
         
         # get train and validation dataset
         train_size = int(len(self.base_set)*split_percentage)
@@ -155,9 +158,13 @@ class Training_loop():
         val_size = len(train_to_split) - train_size
         train_base, val_base = torch.utils.data.random_split(train_to_split, [train_size, val_size]) 
 
-        self.train_set = TrainAugMapper(train_base, self.train_augs)
-        self.val_set = TrainAugMapper(val_base, self.setup_augs)
-        self.test_set = TrainAugMapper(test_base, self.setup_augs)
+        self.train_set = train_base
+        self.val_set = val_base
+        self.test_set = test_base
+
+        #self.train_set = TrainAugMapper(train_base, self.train_augs)
+        #self.val_set = TrainAugMapper(val_base, self.setup_augs)
+        #self.test_set = TrainAugMapper(test_base, self.setup_augs)
         
         self.train_loader = torch.utils.data.DataLoader(self.train_set,
                                                         batch_size = self.train_batch_size,
