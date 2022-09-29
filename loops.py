@@ -126,19 +126,6 @@ class Training_loop():
             random.seed(worker_seed)
             #print("Worker ID:", info.id, "Worker Seed:",worker_seed)
 
-        if train == True:
-            self.train_set = RotationDataset(root=self.root,
-                                             transform=training_augmentations)
-            self.train_loader = torch.utils.data.DataLoader(self.train_set,
-                                                            batch_size = self.train_batch_size,
-                                                            shuffle = self.train_shuffle,
-                                                            num_workers = self.train_workers)
-        if test == True:
-            pass
-        if validation == True:
-            pass
-
-
         # setting random seed
         gen = torch.Generator()
         gen.manual_seed(seed)
