@@ -29,7 +29,7 @@ for key, val in results_dicts.items():
     count += 1
     ax.plot(epochs, val["train_loss"], label = "training_total", color = "#0000FF")
     ax.plot(epochs, val["val_loss"], label = "val_total", color = "#EE4B2B")
-    ax.scatter(val["best_epoch"][-1], val["best_loss"][-1], c = "g", marker = "o")
+    ax.scatter(val["best_epoch"][-1]+1, val["best_loss"][-1], c = "g", marker = "o")
 
     ax.set_xlabel("Number of Epochs")
     ax.set_ylabel("Loss Value")

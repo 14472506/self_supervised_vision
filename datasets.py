@@ -146,6 +146,7 @@ class JigsawDataset(data.Dataset):
         Detials
         """
         # setting random seed
+        self.seed = seed
         self.set_seed()
 
         # image file path and image list
@@ -180,7 +181,6 @@ class JigsawDataset(data.Dataset):
                              (6, 8, 7, 4, 2, 1, 5, 3, 0),
                              (8, 7, 4, 6, 3, 2, 0, 5, 1),
                              (0, 1, 2, 3, 6, 7, 8, 5, 4)]
-        print(self.permutations)
 
     def __getitem__(self, idx):
         """
@@ -245,9 +245,11 @@ class JigsawDataset(data.Dataset):
         tiles[:, :, :, :] = tiles[permutation, :, :, :]
 
         y.append(permutation_index)
-        y = torch.tensor(y).long()
 
-        return tiles, y 
+        label = torch.zeros(self.num_permutations)
+        label[y] = y[0]
+
+        return tiles, label 
         
     def __len__(self):
         """
@@ -292,6 +294,8 @@ class JigsawDataset(data.Dataset):
 
         # cropping image to square
         img = img.crop((left, top, right, bottom))
+
+        img = img.resize((1080, 1080))
         
         img_width, img_height = img.size
 

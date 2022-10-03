@@ -7,7 +7,7 @@ EXPERIMENT_NAME: test
 DATASET:
   ROOT: ./data/jersey_royals_ssl_ds
   TRAIN:
-    BATCH_SIZE: 8
+    BATCH_SIZE: 4
     SHUFFLE: TRUE
     WORKERS: 8
   VAL:
@@ -41,4 +41,4 @@ OPTIMIZER:
 LOOP:
   STARTING_EPOCH: 0
   EPOCHS: 40
-  PRINT_FREQ: 5
+  PRINT_FREQ: 20

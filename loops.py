@@ -17,7 +17,7 @@ import torchvision.transforms as T
 import torch.optim as optim
 
 # model imports
-from models import resnet50_rotation_classifier
+from models import resnet50_rotation_classifier, JigsawClassifier
 from losses import classification_loss
 from datasets import RotationDataset, TrainAugMapper, JigsawDataset
 from transforms import training_augmentations, setup_augmentations
@@ -77,8 +77,8 @@ class Training_loop():
         self.load_dataset()
 
         # getting model
-        self.model = resnet50_rotation_classifier(pre_trained=cd['MODEL']['PRE_TRAINED'],
-                                                  num_rotations=cd['MODEL']['NUM_ROTATIONS'])
+        self.model = JigsawClassifier(pre_trained=cd['MODEL']['PRE_TRAINED'])#,
+                                    #(num_rotations=cd['MODEL']['NUM_ROTATIONS'])
         self.model.to(self.device)
 
         # optimizer config
@@ -92,7 +92,7 @@ class Training_loop():
         self.start_epoch = cd['LOOP']['STARTING_EPOCH']
         self.epochs = cd['LOOP']['EPOCHS']
         self.print_freque = cd['LOOP']['PRINT_FREQ']
-        self.loop()
+        #self.loop()
 
         self.eval()
 
@@ -265,6 +265,7 @@ class Training_loop():
             # forward + backward + optimizer
             output = self.model(input)
             loss = classification_loss(output, labels)
+
             loss.backward()
             self.optimizer.step()
 
@@ -304,15 +305,15 @@ class Training_loop():
         for i, data in enumerate(self.val_loader, 0):
             
             # get data and send it to device 
-            inputs, label = data
-            inputs, label = inputs.to(self.device), label.to(self.device)
+            inputs, labels = data
+            inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             # with torch no grad get output from model
             with torch.no_grad():
                 output = self.model(inputs) 
             
             # get loss and add it to loss accumulator
-            loss = classification_loss(output, label)
+            loss = classification_loss(output, labels)
             loss_acc += loss.item()
 
         # calculate and return validation loss
@@ -334,7 +335,7 @@ class Training_loop():
         self.model.eval()
 
         # init data collector
-        classes = (0, 1, 2, 3)
+        classes = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
         correct_pred = {classname: 0 for classname in classes}
         total_pred = {classname:0 for classname in classes}
         results_rec = {classname:0 for classname in classes}
@@ -351,10 +352,14 @@ class Training_loop():
                 _, predictions = torch.max(outputs, 1)
                 
                 # getting collecting correct predictions
-                for label, prediction in zip(labels, predictions):
-                    if label == prediction:
-                        correct_pred[classes[label]] += 1
-                    total_pred[classes[label]] += 1
+                for label, predictions in zip(labels, predictions):
+                
+                    label_val = int(torch.sum(label).item())
+                    pred_val = predictions.item()
+
+                    if label_val == pred_val:
+                        correct_pred[classes[label_val]] += 1
+                    total_pred[classes[label_val]] += 1
 
         for classname, correct_count in correct_pred.items():
             accuracy = 100 * float(correct_count) / total_pred[classname]
