@@ -1,7 +1,7 @@
 # Detials
 
 # setup params
-EXPERIMENT_NAME: test
+EXPERIMENT_NAME: Jigsaw_4x24_40ep
 
 # dataset config
 DATASET:

@@ -46,7 +46,7 @@ class JigsawClassifier(nn.Module):
                                           nn.BatchNorm1d(512),
                                           nn.ReLU(inplace=True))
         
-        self.classifier = nn.Sequential(nn.Linear(4608, 4096, bias=False),
+        self.classifier = nn.Sequential(nn.Linear(2048, 4096, bias=False),
                                          nn.BatchNorm1d(4096),
                                          nn.ReLU(inplace=True),
                                          nn.Linear(4096, num_permutations))

@@ -20,8 +20,13 @@ import torch.utils.data as data
 import torchvision.transforms as T
 import torch.nn.functional as F
 
+# supporting files
+from permutations import hun_perm, ten_perm, perm_24
+
 # =============================================================================================== #
 # Classes
+# =============================================================================================== #
+# ===== Rotation Dataset Classes ================================================================ #
 # =============================================================================================== #
 class RotationDataset(data.Dataset):
     """
@@ -96,8 +101,7 @@ class RotationDataset(data.Dataset):
         return torch.tensor([[torch.cos(theta), -torch.sin(theta), 0],
                              [torch.sin(theta), torch.cos(theta), 0]])
 
-
-class TrainAugMapper(torch.utils.data.Dataset):
+class RotationTrainAugMapper(torch.utils.data.Dataset):
     """
     Detials
     """
@@ -122,19 +126,14 @@ class TrainAugMapper(torch.utils.data.Dataset):
      
         return(image, label)
 
-
     def __len__(self):
         """
         Details
         """
         return len(self.dataset)
 
-#if __name__ == "__main__":
-#    Rot = RotationDataset("/home/bradley/workspace/self_supervised_vision/jersey_royals")
-#    x, y = Rot.__getitem__(0)
-#    print(x, y)
-
-
+# ===== Jigsaw Dataset Classes ================================================================== #
+# =============================================================================================== #
 class JigsawDataset(data.Dataset):
     """
     Detials
@@ -171,16 +170,9 @@ class JigsawDataset(data.Dataset):
         #self.permutations = self.generate_permutation_set(num_tiles = self.num_tiles,
         #                                                  num_permutations = self.num_permutations,
         #                                                  method = self.perm_method)
-        self.permutations = [(7, 2, 1, 5, 4, 3, 6, 0, 8),
-                             (0, 1, 2, 3, 5, 4, 7, 8, 6),
-                             (1, 0, 3, 2, 6, 5, 8, 4, 7),
-                             (2, 3, 0, 1, 7, 8, 4, 6, 5),
-                             (3, 4, 5, 0, 8, 6, 1, 7, 2),
-                             (4, 5, 6, 8, 0, 7, 2, 1, 3),
-                             (5, 6, 8, 7, 1, 0, 3, 2, 4),
-                             (6, 8, 7, 4, 2, 1, 5, 3, 0),
-                             (8, 7, 4, 6, 3, 2, 0, 5, 1),
-                             (0, 1, 2, 3, 6, 7, 8, 5, 4)]
+        
+        self.permutations = perm_24
+        print(self.permutations)
 
     def __getitem__(self, idx):
         """
@@ -247,7 +239,7 @@ class JigsawDataset(data.Dataset):
         y.append(permutation_index)
 
         label = torch.zeros(self.num_permutations)
-        label[y] = y[0]
+        label[y] = 1
 
         return tiles, label 
         
@@ -325,39 +317,41 @@ class JigsawDataset(data.Dataset):
             # adding permutations at current index to set
             permutations.append(tuple(all_permutations[:, current_index]))
             # remove current permutations at current index from all permutations
-            all_permutations = np.delete(all_permutations, current_index, axis=1)
-
-            # uniformly sample if average and skip computation
-            if method == "average":
-                current_index = random.randint(0, np.math.factorial(num_tiles) - i)
-                continue
-            
-            # compute the hamming distance matrix
-            distances = np.empty((i, np.math.factorial(num_tiles) - i))
-
-            for j in range(i):
-                for k in range(np.math.factorial(num_tiles) - i):
-                    distances[j, k] = hamming(permutations[j], all_permutations[:, k])
-            
-            distances = np.matmul(np.ones((1, i)), distances)
-
-            # choose the next permutation s.t. it maximises objective
-            if method == "maximal":
-                current_index = np.argmax(distances) 
-            elif method == "minimal":
-                current_index = np.argmin(distances)
-        
-        # compute minimum hamming distance in generated permutation sets
-        distances_ = []
-        for i in range(num_permutations):
-            for j in range(num_permutations):
-                if i != j:
-                    distances_.append(hamming(np.array(permutations[i]), np.array(permutations[j])))
-        
-        min_distance = min(distances_)
-        print('Minimum hamming distance is chosen as %0.4f' % min_distance)
-
-        return permutations
+        #################################################################################
+        #    all_permutations = np.delete(all_permutations, current_index, axis=1)
+        #
+        #    # uniformly sample if average and skip computation
+        #    if method == "average":
+        #        current_index = random.randint(0, np.math.factorial(num_tiles) - i)
+        #        continue
+        #    
+        #    # compute the hamming distance matrix
+        #    distances = np.empty((i, np.math.factorial(num_tiles) - i))
+        #
+        #    for j in range(i):
+        #        for k in range(np.math.factorial(num_tiles) - i):
+        #            distances[j, k] = hamming(permutations[j], all_permutations[:, k])
+        #    
+        #    distances = np.matmul(np.ones((1, i)), distances)
+        #
+        #    # choose the next permutation s.t. it maximises objective
+        #    if method == "maximal":
+        #        current_index = np.argmax(distances) 
+        #    elif method == "minimal":
+        #        current_index = np.argmin(distances)
+        #
+        ## compute minimum hamming distance in generated permutation sets
+        #distances_ = []
+        #for i in range(num_permutations):
+        #    for j in range(num_permutations):
+        #        if i != j:
+        #            distances_.append(hamming(np.array(permutations[i]), np.array(permutations[j])))
+        #
+        #min_distance = min(distances_)
+        #print('Minimum hamming distance is chosen as %0.4f' % min_distance)
+        #
+        #print(permutations)
+        #return permutations
     
     def set_seed(self):
         """
@@ -370,3 +364,46 @@ class JigsawDataset(data.Dataset):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
         os.environ['PYTHONHASHSEED'] = str(self.seed)
+
+class JigsawTrainAugMapper(torch.utils.data.Dataset):
+    """
+    Detials
+    """
+    def __init__(self, dataset, transforms):
+        """
+        Detials
+        """
+        self.dataset = dataset
+        self.transforms = transforms
+
+    def __getitem__(self, idx):
+        """
+        Detials
+        """
+        # getting image
+        image, label = self.dataset[idx]
+        
+        # prepare augmented image stack
+        aug_stack = []
+        
+        # loop through base stack
+        for i in image:
+            pil_trans = T.ToPILImage()
+            pil = pil_trans(i)
+            np_img = np.array(pil)
+            transformed = self.transforms(image=np_img)
+            stack_image = transformed['image']
+            aug_stack.append(stack_image)
+
+        stack = torch.stack(aug_stack)
+        image = stack
+
+        return(image, label)
+
+    def __len__(self):
+        """
+        Details
+        """
+        return len(self.dataset)
+
+
