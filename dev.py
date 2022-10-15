@@ -1,9 +1,11 @@
-import yaml
+import torch
+import torch.nn.functional as F
 
-with open("test.yaml", "r") as stream:
-    try: 
-        data = yaml.safe_load(stream)
-    except yaml.YAMLError as exc:
-        print(exc)
-    
-print(data)
+#loss = F.cross_entropy
+
+inputs = torch.randn(24, 5, requires_grad=True)
+target = torch.empty(24, dtype=torch.long).random_(5)
+
+loss = F.cross_entropy(inputs, target) 
+
+print(loss)

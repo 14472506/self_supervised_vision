@@ -17,10 +17,10 @@ import torchvision.transforms as T
 import torch.optim as optim
 
 # model imports
-from models import resnet50_rotation_classifier
+from models import resnet50_rotation_classifier, JigsawClassifier
 from losses import classification_loss
-from datasets import RotationDataset, TrainAugMapper
-from transforms import training_augmentations, setup_augmentations
+from datasets import RotationDataset, JigsawTrainAugMapper, JigsawDataset
+from transforms import jigsaw_training_augmentations, jigsaw_setup_augmentations
 from utils import make_dir, model_saver
 
 # =============================================================================================== #
@@ -60,7 +60,7 @@ class Training_loop():
         self.crop_min = self.cd['TRANSFORMS']['CROP_MIN']
         self.crop_max = self.cd['TRANSFORMS']['CROP_MAX']
         
-        self.train_augs = training_augmentations(resize=(self.min, self.max), crop_size=(self.crop_min, self.crop_max))
+        self.train_augs = jigsaw_training_augmentations(resize=(self.min, self.max), crop_size=(self.crop_min, self.crop_max))
 
         # ----- test dataset config
         self.test_batch_size = self.cd['DATASET']['TEST']['BATCH_SIZE']
@@ -71,14 +71,16 @@ class Training_loop():
         self.val_shuffle = self.cd['DATASET']['VAL']['SHUFFLE']
         self.val_workers = self.cd['DATASET']['VAL']['WORKERS']
 
-        self.setup_augs = setup_augmentations(resize=(self.min, self.max))
+        self.setup_augs = jigsaw_setup_augmentations(resize=(self.min, self.max))
 
         # loading dataset
         self.load_dataset()
 
         # getting model
-        self.model = resnet50_rotation_classifier(pre_trained=cd['MODEL']['PRE_TRAINED'],
-                                                  num_rotations=cd['MODEL']['NUM_ROTATIONS'])
+        self.model = JigsawClassifier(pre_trained=cd['MODEL']['PRE_TRAINED'],
+                                      num_tiles=4,
+                                      num_permutations=24)#,
+                                    #(num_rotations=cd['MODEL']['NUM_ROTATIONS'])
         self.model.to(self.device)
 
         # optimizer config
@@ -126,25 +128,15 @@ class Training_loop():
             random.seed(worker_seed)
             #print("Worker ID:", info.id, "Worker Seed:",worker_seed)
 
-        if train == True:
-            self.train_set = RotationDataset(root=self.root,
-                                             transform=training_augmentations)
-            self.train_loader = torch.utils.data.DataLoader(self.train_set,
-                                                            batch_size = self.train_batch_size,
-                                                            shuffle = self.train_shuffle,
-                                                            num_workers = self.train_workers)
-        if test == True:
-            pass
-        if validation == True:
-            pass
-
-
         # setting random seed
         gen = torch.Generator()
         gen.manual_seed(seed)
 
         # get base dataset
-        self.base_set = RotationDataset(root=self.root, seed=self.seed)
+        #self.base_set = RotationDataset(root=self.root, seed=self.seed)
+        self.base_set = JigsawDataset(root=self.root,
+                                      num_tiles=4,
+                                      num_permutations=24)
         
         # get train and validation dataset
         train_size = int(len(self.base_set)*split_percentage)
@@ -155,9 +147,9 @@ class Training_loop():
         val_size = len(train_to_split) - train_size
         train_base, val_base = torch.utils.data.random_split(train_to_split, [train_size, val_size]) 
 
-        self.train_set = TrainAugMapper(train_base, self.train_augs)
-        self.val_set = TrainAugMapper(val_base, self.setup_augs)
-        self.test_set = TrainAugMapper(test_base, self.setup_augs)
+        self.train_set = JigsawTrainAugMapper(train_base, self.train_augs)
+        self.val_set = JigsawTrainAugMapper(val_base, self.setup_augs)
+        self.test_set = JigsawTrainAugMapper(test_base, self.setup_augs)
         
         self.train_loader = torch.utils.data.DataLoader(self.train_set,
                                                         batch_size = self.train_batch_size,
@@ -264,6 +256,7 @@ class Training_loop():
             input, labels = data
             input = input.float()
             input, labels = input.to(self.device), labels.to(self.device)
+            print(labels)
 
             # set param gradient to zero
             self.optimizer.zero_grad()
@@ -271,6 +264,7 @@ class Training_loop():
             # forward + backward + optimizer
             output = self.model(input)
             loss = classification_loss(output, labels)
+
             loss.backward()
             self.optimizer.step()
 
@@ -310,15 +304,15 @@ class Training_loop():
         for i, data in enumerate(self.val_loader, 0):
             
             # get data and send it to device 
-            inputs, label = data
-            inputs, label = inputs.to(self.device), label.to(self.device)
+            inputs, labels = data
+            inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             # with torch no grad get output from model
             with torch.no_grad():
                 output = self.model(inputs) 
             
             # get loss and add it to loss accumulator
-            loss = classification_loss(output, label)
+            loss = classification_loss(output, labels)
             loss_acc += loss.item()
 
         # calculate and return validation loss
@@ -340,7 +334,7 @@ class Training_loop():
         self.model.eval()
 
         # init data collector
-        classes = (0, 1, 2, 3)
+        classes = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
         correct_pred = {classname: 0 for classname in classes}
         total_pred = {classname:0 for classname in classes}
         results_rec = {classname:0 for classname in classes}
@@ -358,9 +352,13 @@ class Training_loop():
                 
                 # getting collecting correct predictions
                 for label, prediction in zip(labels, predictions):
-                    if label == prediction:
-                        correct_pred[classes[label]] += 1
-                    total_pred[classes[label]] += 1
+                
+                    label_val = (label == 1).nonzero(as_tuple=True)[0].item()
+                    pred_val = prediction.item()
+
+                    if label_val == pred_val:
+                        correct_pred[classes[label_val]] += 1
+                    total_pred[classes[label_val]] += 1
 
         for classname, correct_count in correct_pred.items():
             accuracy = 100 * float(correct_count) / total_pred[classname]

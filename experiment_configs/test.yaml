@@ -1,13 +1,13 @@
 # Detials
 
 # setup params
-EXPERIMENT_NAME: Train_test1
+EXPERIMENT_NAME: Jigsaw_4x24_40ep
 
 # dataset config
 DATASET:
   ROOT: ./data/jersey_royals_ssl_ds
   TRAIN:
-    BATCH_SIZE: 8
+    BATCH_SIZE: 4
     SHUFFLE: TRUE
     WORKERS: 8
   VAL:
@@ -40,5 +40,5 @@ OPTIMIZER:
 # training loop
 LOOP:
   STARTING_EPOCH: 0
-  EPOCHS: 1
-  PRINT_FREQ: 5
+  EPOCHS: 40
+  PRINT_FREQ: 20
