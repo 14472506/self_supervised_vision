@@ -171,7 +171,7 @@ class JigsawDataset(data.Dataset):
         #                                                  num_permutations = self.num_permutations,
         #                                                  method = self.perm_method)
         
-        self.permutations = perm_24
+        self.permutations = hun_perm
         print(self.permutations)
 
     def __getitem__(self, idx):

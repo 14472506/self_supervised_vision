@@ -78,8 +78,8 @@ class Training_loop():
 
         # getting model
         self.model = JigsawClassifier(pre_trained=cd['MODEL']['PRE_TRAINED'],
-                                      num_tiles=4,
-                                      num_permutations=24)#,
+                                      num_tiles=9,
+                                      num_permutations=100)#,
                                     #(num_rotations=cd['MODEL']['NUM_ROTATIONS'])
         self.model.to(self.device)
 
@@ -96,7 +96,7 @@ class Training_loop():
         self.print_freque = cd['LOOP']['PRINT_FREQ']
         self.loop()
 
-        self.eval()
+        #self.eval()
 
 
     def set_seed(self):
@@ -135,8 +135,8 @@ class Training_loop():
         # get base dataset
         #self.base_set = RotationDataset(root=self.root, seed=self.seed)
         self.base_set = JigsawDataset(root=self.root,
-                                      num_tiles=4,
-                                      num_permutations=24)
+                                      num_tiles=9,
+                                      num_permutations=100)
         
         # get train and validation dataset
         train_size = int(len(self.base_set)*split_percentage)
@@ -334,7 +334,16 @@ class Training_loop():
         self.model.eval()
 
         # init data collector
-        classes = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+        classes = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                   20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+                   30, 31, 32, 33, 34, 35, 36, 27, 28, 39,
+                   40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+                   50, 51, 52, 53, 54, 55, 56, 57, 58, 59,
+                   60, 61, 62, 63, 64, 65, 66, 67, 68, 69,
+                   70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+                   80, 81, 82, 83, 84, 85, 86, 87, 88, 89,
+                   90, 91, 92, 93, 94, 95, 96, 97, 98, 99)
         correct_pred = {classname: 0 for classname in classes}
         total_pred = {classname:0 for classname in classes}
         results_rec = {classname:0 for classname in classes}
