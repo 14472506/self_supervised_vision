@@ -10,6 +10,7 @@ from random import shuffle
 import numpy as np
 import os
 import json
+import matplotlib.pyplot as plt
 
 # torch imports
 import torch 
@@ -17,9 +18,9 @@ import torchvision.transforms as T
 import torch.optim as optim
 
 # model imports
-from models import resnet50_rotation_classifier, JigsawClassifier
-from losses import classification_loss
-from datasets import RotationDataset, JigsawTrainAugMapper, JigsawDataset
+from models import resnet50_rotation_classifier, JigsawClassifier, ContextEncoder
+from losses import classification_loss, reconstruction_loss
+from datasets import RotationDataset, JigsawTrainAugMapper, JigsawDataset, ContextEncDataset, ContextEncTrainAugMapper
 from transforms import jigsaw_training_augmentations, jigsaw_setup_augmentations
 from utils import make_dir, model_saver
 
@@ -77,10 +78,11 @@ class Training_loop():
         self.load_dataset()
 
         # getting model
-        self.model = JigsawClassifier(pre_trained=cd['MODEL']['PRE_TRAINED'],
-                                      num_tiles=9,
-                                      num_permutations=100)#,
-                                    #(num_rotations=cd['MODEL']['NUM_ROTATIONS'])
+        #self.model = JigsawClassifier(pre_trained=cd['MODEL']['PRE_TRAINED'],
+        #                              num_tiles=9,
+        #                              num_permutations=100)#,
+        #                            #(num_rotations=cd['MODEL']['NUM_ROTATIONS'])
+        self.model = ContextEncoder(target_size=(1080, 1080))
         self.model.to(self.device)
 
         # optimizer config
@@ -134,9 +136,10 @@ class Training_loop():
 
         # get base dataset
         #self.base_set = RotationDataset(root=self.root, seed=self.seed)
-        self.base_set = JigsawDataset(root=self.root,
-                                      num_tiles=9,
-                                      num_permutations=100)
+        #self.base_set = JigsawDataset(root=self.root,
+        #                              num_tiles=9,
+        #                              num_permutations=100)
+        self.base_set = ContextEncDataset(root=self.root, mask_method='random_blocks') 
         
         # get train and validation dataset
         train_size = int(len(self.base_set)*split_percentage)
@@ -147,9 +150,13 @@ class Training_loop():
         val_size = len(train_to_split) - train_size
         train_base, val_base = torch.utils.data.random_split(train_to_split, [train_size, val_size]) 
 
-        self.train_set = JigsawTrainAugMapper(train_base, self.train_augs)
-        self.val_set = JigsawTrainAugMapper(val_base, self.setup_augs)
-        self.test_set = JigsawTrainAugMapper(test_base, self.setup_augs)
+        #self.train_set = train_base
+        #self.val_set = val_base
+        #self.test_set = test_base
+
+        self.train_set = ContextEncTrainAugMapper(train_base, self.train_augs)
+        self.val_set = ContextEncTrainAugMapper(val_base, self.setup_augs)
+        self.test_set = ContextEncTrainAugMapper(test_base, self.setup_augs)
         
         self.train_loader = torch.utils.data.DataLoader(self.train_set,
                                                         batch_size = self.train_batch_size,
@@ -214,19 +221,19 @@ class Training_loop():
 
             # run validation on one one epoch
             epoch_val_loss = self.val_one_epoch()
-
+            
             # save last model 
             model_saver(epoch, self.model, self.optimizer, self.exp_dir, "last_model.pth")
             self.data_recorder["train_loss"].append(epoch_train_loss)
             self.data_recorder["val_loss"].append(epoch_val_loss)
-
+            
             # saving best model
             if epoch_val_loss < best_model:
                 model_saver(epoch, self.model, self.optimizer, self.exp_dir, "best_model.pth") 
                 self.data_recorder["best_loss"].append(epoch_val_loss)
                 self.data_recorder["best_epoch"].append(epoch)
                 best_model = epoch_val_loss
-
+            
             # carry out model saving
             print("training results: ", epoch_train_loss, "val results: ", epoch_val_loss)
 
@@ -253,17 +260,22 @@ class Training_loop():
         for i, data in enumerate(self.train_loader, 0):
                 
             # get data from loader and send it to device
-            input, labels = data
-            input = input.float()
-            input, labels = input.to(self.device), labels.to(self.device)
-            print(labels)
+            x, y, mask = data
+            #input = input.float()
+            x, y, mask = x.to(self.device), y.to(self.device), mask.to(self.device)
+            #print(labels)
 
             # set param gradient to zero
             self.optimizer.zero_grad()
 
             # forward + backward + optimizer
-            output = self.model(input)
-            loss = classification_loss(output, labels)
+            output = self.model(x)
+            #if i % 340 == 339:
+            #    plt.imshow(output[0].cpu().detach().permute(1, 2, 0))
+            #    plt.show()
+            #print(output)
+            #loss = classification_loss(output, labels)
+            loss = reconstruction_loss(output, y)
 
             loss.backward()
             self.optimizer.step()
@@ -304,15 +316,22 @@ class Training_loop():
         for i, data in enumerate(self.val_loader, 0):
             
             # get data and send it to device 
-            inputs, labels = data
-            inputs, labels = inputs.to(self.device), labels.to(self.device)
+            #inputs, labels = data
+            #inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+            # get data from loader and send it to device
+            x, y, mask = data
+            #input = input.float()
+            x, y, mask = x.to(self.device), y.to(self.device), mask.to(self.device)
+            #print(labels)
 
             # with torch no grad get output from model
             with torch.no_grad():
-                output = self.model(inputs) 
+                output = self.model(x) 
             
             # get loss and add it to loss accumulator
-            loss = classification_loss(output, labels)
+            #loss = classification_loss(output, labels)
+            loss = reconstruction_loss(output, y)
             loss_acc += loss.item()
 
         # calculate and return validation loss

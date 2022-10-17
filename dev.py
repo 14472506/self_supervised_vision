@@ -1,11 +1,7 @@
+import torch.nn as nn
 import torch
-import torch.nn.functional as F
 
-#loss = F.cross_entropy
-
-inputs = torch.randn(24, 5, requires_grad=True)
-target = torch.empty(24, dtype=torch.long).random_(5)
-
-loss = F.cross_entropy(inputs, target) 
-
-print(loss)
+m = nn.AdaptiveAvgPool2d((5,7))
+input = torch.randn(1, 64, 8, 9)
+output = m(input)
+print(output.shape)

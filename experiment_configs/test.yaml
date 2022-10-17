@@ -1,14 +1,14 @@
 # Detials
 
 # setup params
-EXPERIMENT_NAME: Jigsaw_testforran
+EXPERIMENT_NAME: enc_test
 
 # dataset config
 DATASET:
   ROOT: ./data/jersey_royals_ssl_ds
   TRAIN:
     BATCH_SIZE: 4
-    SHUFFLE: FALSE
+    SHUFFLE: TRUE
     WORKERS: 8
   VAL:
     BATCH_SIZE: 1
@@ -34,7 +34,7 @@ MODEL:
 OPTIMIZER:
   NAME: "Adam"
   PARAMS:
-    - 0.00005
+    - 0.00001
 
 
 # training loop

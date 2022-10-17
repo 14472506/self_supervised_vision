@@ -406,4 +406,218 @@ class JigsawTrainAugMapper(torch.utils.data.Dataset):
         """
         return len(self.dataset)
 
+# ===== Jigsaw Dataset Classes ================================================================== #
+# =============================================================================================== #
+class ContextEncDataset(data.Dataset):
+    """
+    Detials
+    """
 
+    def __init__(self, root, mask_method="central_block", fill_value=(0.485, 0.456, 0.406), seed=42):
+        """
+        Details
+        """
+        # setting random seed
+        self.seed = seed
+        self.set_seed()
+
+        self.mask_method = mask_method
+
+        # image file path and image list
+        self.root = os.path.expanduser(root)
+        self.image_files = []
+        for file in os.listdir(self.root):
+            self.image_files.append(file)
+
+        # check fill value is of right type
+        assert isinstance(fill_value, tuple) or isinstance(fill_value, int) or isinstance(fill_value, float)
+        self.fill_value = fill_value
+
+    def __getitem__(self, idx):
+        """
+        Detials
+        """
+        # get image
+        image_path =  os.path.join(self.root, self.image_files[idx])
+        img = Image.open(image_path).convert("RGB")
+
+        # process image
+        img, img_width, img_height = self.process_image(img)
+
+        # to torch img
+        transform = T.Compose([T.ToTensor()])
+        torch_img = transform(img)
+
+        # get num channels
+        num_channels = torch_img.shape[0]
+
+        # select mask method
+        if self.mask_method == 'central_block':
+            mask = self.get_central_block_mask(torch_img)
+        elif self.mask_method == 'random_blocks':
+            mask = self.get_random_blocks_mask(torch_img)
+
+        # splitting x and y into img without region and only region of image for x and y respectively
+        x, y = (1. - mask) * torch_img, mask * torch_img
+
+        # Convert `self.fill_value` to a tuple and validate it
+        if isinstance(self.fill_value, int) or isinstance(self.fill_value, float):
+            self.fill_value = (self.fill_value,) * num_channels
+        elif len(self.fill_value) != num_channels:
+            raise ValueError('The length of `fill_value` does not match the number of channels!')
+
+        # Color empty regions with the specified fill value
+        for i in range(num_channels):
+            x[i, :, :][x[i, :, :] == 0.] = self.fill_value[i]
+
+        return x, y, mask
+        
+    @staticmethod
+    def get_central_block_mask(img):
+        """
+        Gets the central block in the image as a mask.
+        :param (torch.Tensor) x: tensor image
+        """
+        mask = torch.zeros_like(img)
+        img_height, img_width = img.shape[-2], img.shape[-1]
+
+        block_height, block_width = img_height // 4, img_width // 4
+
+        ycenters, xcenters = img_height // 2, img_width // 2
+
+        ymins = ycenters - block_height // 4
+        ymaxs = ycenters + block_height // 4
+        xmins = xcenters - block_width // 4
+        xmaxs = xcenters + block_width // 4
+
+        mask[:, ymins: ymaxs, xmins: xmaxs] = 1.
+
+        return mask
+    
+    @staticmethod
+    def get_random_blocks_mask(x):
+        """
+        Gets randomly placed square blocks. The number of blocks per image vary from 1 to 9.
+        :param (torch.Tensor) x: tensor image
+        """
+        mask = torch.zeros_like(x)
+        batch_size, img_height, img_width = x.shape[0], x.shape[-2], x.shape[-1]
+
+        max_num_blocks = 9
+        block_height, block_width = img_height // 6, img_width // 6
+
+        ycenters = np.random.randint(low=0, high=img_height, size=(batch_size, max_num_blocks))
+        xcenters = np.random.randint(low=0, high=img_width, size=(batch_size, max_num_blocks))
+
+        ymins = np.clip(ycenters - block_height // 2, 0, img_height)
+        ymaxs = np.clip(ycenters + block_height // 2, 0, img_height)
+        xmins = np.clip(xcenters - block_height // 2, 0, img_width)
+        xmaxs = np.clip(xcenters + block_height // 2, 0, img_width)
+
+        for i in range(batch_size):
+            num_blocks = random.randint(1, max_num_blocks)
+            for j in range(num_blocks):
+                mask[:, ymins[i, j]: ymaxs[i, j], xmins[i, j]: xmaxs[i, j]] = 1.
+
+        return mask
+
+    def __len__(self):
+        """
+        Detials
+        """
+        return len(self.image_files)
+
+    def set_seed(self):
+        """
+        Details
+        """
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+        torch.manual_seed(self.seed)
+        torch.cuda.manual_seed_all(self.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        os.environ['PYTHONHASHSEED'] = str(self.seed)
+
+    def process_image(self, img):
+        """
+        Detials
+        """
+        # chack size and resize if needs be 
+        img_width, img_height = img.size
+
+        # if sizes do not match
+        if img_width != img_height:
+
+            # find max and min dimension    
+            wh_idx = [img_width, img_height]
+            min_dim = min(wh_idx)
+            max_dim = max(wh_idx)
+
+            # get crop dims 
+            delta = max_dim - min_dim
+            min_crop = delta/2
+            max_crop = max_dim - min_crop
+
+            # get min side index
+            min_idx = wh_idx.index(min_dim)
+
+            # configuring crop window depending on min dim index
+            if min_idx == 0: 
+                left = 0
+                top = min_crop
+                right = min_dim 
+                bottom = max_crop
+            elif min_idx == 1:
+                left = min_crop
+                top = 0
+                right = max_crop
+                bottom = min_dim
+
+        # cropping image to square
+        img = img.crop((left, top, right, bottom))
+
+        img = img.resize((1080, 1080))
+        
+        img_width, img_height = img.size
+
+        return img, img_width, img_height
+
+class ContextEncTrainAugMapper(torch.utils.data.Dataset):
+    """
+    Detials
+    """
+    def __init__(self, dataset, transforms):
+        """
+        Detials
+        """
+        self.dataset = dataset
+        self.transforms = transforms
+
+    def __getitem__(self, idx):
+        """
+        Detials
+        """
+        # getting image
+        x, y, mask = self.dataset[idx]
+        
+        pil_trans = T.ToPILImage()
+        x_pil = pil_trans(x)
+        y_pil = pil_trans(y)
+
+        np_x = np.array(x_pil)
+        np_y = np.array(y_pil)
+        
+        x_trans = self.transforms(image=np_x)
+        y_trans = self.transforms(image=np_y)
+        
+        x = x_trans['image']
+        y = y_trans['image']
+
+        return(x, y, mask)
+
+    def __len__(self):
+        """
+        Details
+        """
+        return len(self.dataset)
