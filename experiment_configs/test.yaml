@@ -7,7 +7,7 @@ EXPERIMENT_NAME: enc_test
 DATASET:
   ROOT: ./data/jersey_royals_ssl_ds
   TRAIN:
-    BATCH_SIZE: 4
+    BATCH_SIZE: 1
     SHUFFLE: TRUE
     WORKERS: 8
   VAL:
