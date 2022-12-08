@@ -9,6 +9,7 @@ import torch
 
 from data_handler import DataHandler
 from model import rotnet_setup
+from model import RotNet_training_loop, RotNet_validation_loop
 
 # training class
 class TrainingLoop():
@@ -31,6 +32,13 @@ class TrainingLoop():
         # get model, optimiser, and criterion
         self.model_loader()
 
+        # loop loging attributes
+        self.count = 0
+        self.print_freque = 20
+
+        self.train_one_epoch = RotNet_training_loop
+        self.validate_one_epoch = RotNet_validation_loop
+
     def data_loader(self):
         """
         Detials
@@ -38,7 +46,7 @@ class TrainingLoop():
         h = DataHandler("data/jersey_royals_ssl_ds")
         train, _, val = h.data_laoders()
         self.train_loader = train
-        self.validation_laoder = val
+        self.validation_loader = val
     
     def model_loader(self):
         """
@@ -68,65 +76,18 @@ class TrainingLoop():
         """
         # init counts
         best_model = 100
-        iter_count = 0
 
         # looping through epochs
         for epoch in range(0, 40, 1):
             # train one epoch
-            self.train_one_epoch()
+            epoch_training_loss, self.count = self.train_one_epoch(epoch, self.count, self.model,
+                                                    self.train_loader, self.device, self.optimiser,
+                                                    self.criterion,
+                                                    self.print_freque 
+                                                    )
 
             # val one epoch
-            self.validate_one_epoch()
-
-    def train_one_epoch(self):
-        """
-        Detials
-        """
-        # model config
-        self.model.train()
-
-        # accume init here
-        for i, data in enumerate(self.train_loader, 0):
-            # extact data 
-            x, y_gt = data
-            x, y_gt = x.to(self.device), y_gt.to(self.device)
-
-            # reset gradient
-            self.optimiser.zero_grad
-
-            # forward + backward + optimizer_step
-            y_pred = self.model(x)
-            loss = self.classification_loss(y_pred, y_gt)
-            loss.backward()
-            self.optimiser.step() 
-
-            # reporting goes here
-            print(loss.item())
-        
-    def validate_one_epoch(self):
-        """
-        Detials
-        """
-        # model config
-        self.model.eval()
-
-        # logging here
-
-        for i, data in enumerate(self.validation_laoder, 0):
-            # extract data
-            x, y_gt = data
-            x, y_gt = x.to(self.device), y_gt.to(self.device)
-
-            # forwards 
-            with torch.no_grad():
-                y_pred = self.model(x)
-            
-            # get loss
-            loss = classification_loss(y_pred, y_gt)
-
-            print(loss.item())
-
-        
-
-
-
+            epoch_val_loss = self.validate_one_epoch(self.model,
+                                    self.validation_loader,
+                                    self.device,
+                                    self.criterion)

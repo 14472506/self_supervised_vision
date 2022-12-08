@@ -19,7 +19,7 @@ class RotNet(ModelBase):
         super().__init__(pre_trained=pre_trained)
 
         self.classifier = nn.Sequential(nn.Dropout() if dropout_rate > 0. else nn.Identity(),
-                                nn.Linear(2048, 4096, bias=False if batch_norm else True),
+                                nn.Linear(1000, 4096, bias=False if batch_norm else True),
                                 nn.BatchNorm1d(4096) if batch_norm else nn.Identity(),
                                 nn.ReLU(inplace=True),
                                 nn.Dropout() if dropout_rate > 0. else nn.Identity(),
