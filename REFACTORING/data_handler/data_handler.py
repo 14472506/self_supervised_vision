@@ -2,7 +2,7 @@
 Detials
 """
 # imports 
-from .dataset import RotNetDataset
+from .dataset import RotNetDataset, JigsawDataset
 
 import torch
 import numpy as np
@@ -13,7 +13,7 @@ class DataHandler():
     """
     Detials
     """
-    def __init__(self, root, seed=42, train_test_split=0.8, train_val_split=0.8):
+    def __init__(self, root, dataset_flag, seed=42, train_test_split=0.8, train_val_split=0.8):
         """
         Detials
         """
@@ -26,13 +26,19 @@ class DataHandler():
         self.seed = seed
         self.train_test_split = train_test_split
         self.train_val_split = train_val_split
+        self.dataset_flag = dataset_flag
 
     def load_dataset(self):
         """
         Detials
         """
         # getting base dataset
-        base_dataset = RotNetDataset(self.root)
+        if self.dataset_flag == "RotNet":
+            base_dataset = RotNetDataset(self.root)
+        elif self.dataset_flag == "Jigsaw":
+            base_dataset = JigsawDataset(self.root, num_tiles=4, num_permutations=24)
+        else:
+            print("Dataset Not Specified")
 
         # splitting base dataset into train_base and test sets
         train_base_size = int(len(base_dataset)*self.train_test_split)

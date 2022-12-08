@@ -38,6 +38,40 @@ class RotNet(ModelBase):
         x = self.backbone(x)
         x = self.classifier(x)
         return x
+
+class Jigsaw(ModelBase):
+    """
+    Details
+    """
+    def __init__(self, pre_trained=True, num_tiles=9, num_permutations=10):
+        """
+        Detials
+        """
+        super().__init__(pre_trained=pre_trained)
+
+        self.num_tiles = num_tiles
+
+        self.twin_network = nn.Sequential(nn.Linear(1000, 512, bias=False),
+                                          nn.BatchNorm1d(512),
+                                          nn.ReLU(inplace=True))
+        
+        self.classifier = nn.Sequential(nn.Linear(512*self.num_tiles, 4096, bias=False),
+                                         nn.BatchNorm1d(4096),
+                                         nn.ReLU(inplace=True),
+                                         nn.Linear(4096, num_permutations))
+
+    def forward(self, x):
+        """
+        Detials
+        """
+        assert x.shape[1] == self.num_tiles
+        device = x.device
+        x = torch.stack([self.twin_network(self.backbone(tile)) for tile in x]).to(device)
+        x = torch.flatten(x, start_dim = 1)
+        x = self.classifier(x)
+
+
+        return x
     
 
 

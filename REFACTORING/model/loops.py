@@ -5,7 +5,7 @@ Detials
 import torch
 
 # functions 
-def RotNet_training_loop(epoch, count, model, train_loader, device, optimiser, criterion, print_freque):
+def classification_training_loop(epoch, count, model, train_loader, device, optimiser, criterion, print_freque):
     """
     Detials
     """
@@ -50,7 +50,7 @@ def RotNet_training_loop(epoch, count, model, train_loader, device, optimiser, c
     epoch_loss = acc_loss/len(train_loader)
     return epoch_loss, count
 
-def RotNet_validation_loop(model, validation_loader, device, criterion):
+def classification_validation_loop(model, validation_loader, device, criterion):
     """
     Detials
     """

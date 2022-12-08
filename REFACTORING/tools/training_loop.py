@@ -8,8 +8,8 @@ import os
 import torch
 
 from data_handler import DataHandler
-from model import rotnet_setup
-from model import RotNet_training_loop, RotNet_validation_loop
+from model import rotnet_setup, jigsaw_setup
+from model import classification_training_loop, classification_validation_loop
 
 # training class
 class TrainingLoop():
@@ -30,29 +30,35 @@ class TrainingLoop():
         self.data_loader()
 
         # get model, optimiser, and criterion
-        self.model_loader()
+        self.model_loader("Jigsaw")
 
         # loop loging attributes
         self.count = 0
         self.print_freque = 20
 
-        self.train_one_epoch = RotNet_training_loop
-        self.validate_one_epoch = RotNet_validation_loop
+        self.train_one_epoch = classification_training_loop
+        self.validate_one_epoch = classification_validation_loop
 
     def data_loader(self):
         """
         Detials
         """
-        h = DataHandler("data/jersey_royals_ssl_ds")
+        h = DataHandler("data/jersey_royals_ssl_ds", "Jigsaw")
         train, _, val = h.data_laoders()
         self.train_loader = train
         self.validation_loader = val
     
-    def model_loader(self):
+    def model_loader(self, model_flag):
         """
         Detials
         """
-        model, optimiser, criterion = rotnet_setup()
+        if model_flag == "RotNet":
+            model, optimiser, criterion = rotnet_setup()
+        elif model_flag == "Jigsaw":
+            model, optimiser, criterion = jigsaw_setup(num_tiles=4, num_permutations=24)
+        else:
+            print("Model Not Specified")
+
         self.model = model
         self.optimiser = optimiser
         self.criterion = criterion
@@ -83,8 +89,7 @@ class TrainingLoop():
             epoch_training_loss, self.count = self.train_one_epoch(epoch, self.count, self.model,
                                                     self.train_loader, self.device, self.optimiser,
                                                     self.criterion,
-                                                    self.print_freque 
-                                                    )
+                                                    self.print_freque)
 
             # val one epoch
             epoch_val_loss = self.validate_one_epoch(self.model,
