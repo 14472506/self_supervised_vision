@@ -31,6 +31,10 @@
     },
 "loop":{
     "start_epoch": 0,
-    "end_epoch": 40
+    "end_epoch": 3
+    },
+"logging": {
+    "experiment_name": "RotNet_test",
+    "print_freque": 20
     }
 }

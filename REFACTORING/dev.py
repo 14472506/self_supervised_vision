@@ -9,7 +9,3 @@ with open("config/RotNet_config.json", "r") as f:
 
 loop = TrainingLoop(conf_dict)
 loop.loop()
-
-
-
-

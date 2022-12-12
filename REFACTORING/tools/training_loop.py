@@ -11,6 +11,7 @@ from data_handler import DataHandler
 from model import rotnet_setup, jigsaw_setup
 from .loops import classification_training_loop, classification_validation_loop
 from saver import model_saver
+from logger import recorder_dict, save_config, save_records
 
 # training class
 class TrainingLoop():
@@ -35,10 +36,15 @@ class TrainingLoop():
 
         # loop loging attributes
         self.count = 0
-        self.print_freque = 20
+        self.print_freque = self.cd["logging"]["print_freque"]
 
+        # loading training loops
         self.train_one_epoch = classification_training_loop
         self.validate_one_epoch = classification_validation_loop
+
+        # initialising saving
+        self.recording = recorder_dict()
+        save_config(self.cd)
 
     def data_loader(self):
         """
@@ -97,11 +103,31 @@ class TrainingLoop():
                                     self.validation_loader,
                                     self.device,
                                     self.criterion)
+            
+            # recording loop results)
+            self.recording["epoch"].append(epoch)
+            self.recording["training_loss"].append(epoch_training_loss)
+            self.recording["validation_loss"].append(epoch_validation_loss)
+            model_saver("outputs/" + self.cd["logging"]["experiment_name"],
+                 "last_model.pth",
+                 epoch,
+                 self.model, 
+                 self.optimiser)
 
+            # recording best results 
+            if epoch_validation_loss < best_model:
+                self.recording["best_epoch"].append(epoch)
+                self.recording["best_training_loss"].append(epoch_training_loss)
+                self.recording["best_validation_loss"].append(epoch_validation_loss)
+                model_saver("outputs/" + self.cd["logging"]["experiment_name"],
+                     "best_model.pth",
+                     epoch,
+                     self.model, 
+                     self.optimiser)
+                best_model = epoch_validation_loss
+            
+            # printing loop results
             print("training results: ", epoch_training_loss, "val results: ", epoch_validation_loss)
 
-            # saving last model
-            model_saver("outputs/test", "last_model.pth", epoch, self.model, self.optimiser)
-            if epoch_validation_loss < best_model:
-                model_saver("outputs/test", "best_model.pth", epoch, self.model, self.optimiser)
-                best_model = epoch_validation_loss
+        # save records
+        save_records(self.recording, self.cd)
