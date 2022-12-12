@@ -1,7 +1,11 @@
-import torch.nn as nn
+from tools import TrainingLoop
 import torch
+import json 
 
-m = nn.AdaptiveAvgPool2d((5,7))
-input = torch.randn(1, 64, 8, 9)
-output = m(input)
-print(output.shape)
+from saver import backbone_loader
+
+with open("config/RotNet_config.json", "r") as f:
+    conf_dict = json.load(f)
+
+loop = TrainingLoop(conf_dict)
+loop.loop()

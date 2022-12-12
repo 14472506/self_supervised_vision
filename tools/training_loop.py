@@ -131,3 +131,4 @@ class TrainingLoop():
 
         # save records
         save_records(self.recording, self.cd)
+        print("training complete")

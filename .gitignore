@@ -3,4 +3,6 @@
 outputs/
 /data
 out_store/
-REFACTORING/data
+Archive/data
+Archive/outputs
+Archive/trained_models
