@@ -9,19 +9,20 @@ import torch
 
 from data_handler import DataHandler
 from model import rotnet_setup, jigsaw_setup
-from model import classification_training_loop, classification_validation_loop
+from .loops import classification_training_loop, classification_validation_loop
+from saver import model_saver
 
 # training class
 class TrainingLoop():
     """
     Detials
     """
-    def __init__(self, conf_dict={}, seed=42):
+    def __init__(self, conf_dict, seed=42):
         """
         Detials
         """
         # initial config
-        self.conf_dict = conf_dict
+        self.cd = conf_dict
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.seed = seed
         self.set_seed()
@@ -30,7 +31,7 @@ class TrainingLoop():
         self.data_loader()
 
         # get model, optimiser, and criterion
-        self.model_loader("Jigsaw")
+        self.model_loader()
 
         # loop loging attributes
         self.count = 0
@@ -43,19 +44,19 @@ class TrainingLoop():
         """
         Detials
         """
-        h = DataHandler("data/jersey_royals_ssl_ds", "Jigsaw")
+        h = DataHandler(self.cd)
         train, _, val = h.data_laoders()
         self.train_loader = train
         self.validation_loader = val
     
-    def model_loader(self, model_flag):
+    def model_loader(self):
         """
         Detials
         """
-        if model_flag == "RotNet":
-            model, optimiser, criterion = rotnet_setup()
-        elif model_flag == "Jigsaw":
-            model, optimiser, criterion = jigsaw_setup(num_tiles=4, num_permutations=24)
+        if self.cd["model"]["name"] == "RotNet":
+            model, optimiser, criterion = rotnet_setup(self.cd)
+        elif self.cd["model"]["name"] == "Jigsaw":
+            model, optimiser, criterion = jigsaw_setup(self.cd)
         else:
             print("Model Not Specified")
 
@@ -84,7 +85,7 @@ class TrainingLoop():
         best_model = 100
 
         # looping through epochs
-        for epoch in range(0, 40, 1):
+        for epoch in range(self.cd["loop"]["start_epoch"], self.cd["loop"]["end_epoch"], 1):
             # train one epoch
             epoch_training_loss, self.count = self.train_one_epoch(epoch, self.count, self.model,
                                                     self.train_loader, self.device, self.optimiser,
@@ -92,7 +93,15 @@ class TrainingLoop():
                                                     self.print_freque)
 
             # val one epoch
-            epoch_val_loss = self.validate_one_epoch(self.model,
+            epoch_validation_loss = self.validate_one_epoch(self.model,
                                     self.validation_loader,
                                     self.device,
                                     self.criterion)
+
+            print("training results: ", epoch_training_loss, "val results: ", epoch_validation_loss)
+
+            # saving last model
+            model_saver("outputs/test", "last_model.pth", epoch, self.model, self.optimiser)
+            if epoch_validation_loss < best_model:
+                model_saver("outputs/test", "best_model.pth", epoch, self.model, self.optimiser)
+                best_model = epoch_validation_loss

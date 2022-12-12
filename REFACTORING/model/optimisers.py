@@ -9,26 +9,25 @@ class OptimSelector():
     """
     Detials
     """
-    def __init__(self, model_params, optim_flag, optim_conf={"lr": 0.00005}):
+    def __init__(self, model_params, conf_dict):
         """
         Details
         """
-        self.optim_flag = optim_flag
-        self.optim_conf = optim_conf
         self.model_params = model_params
+        self.cd = conf_dict
 
     def selector(self):
         """ 
         Detials
         """
-        if self.optim_flag == "Adam":
+        if self.cd["optimiser"]["name"] == "Adam":
             optimizer = optim.Adam(self.model_params,
-                            lr = self.optim_conf["lr"])
+                            lr = self.cd["optimiser"]["lr"])
         elif self.optim_flag == "SGD":
             optimizer = optim.SGD(self.model_params,
-                            lr = self.optim_conf["lr"],
-                            momentum = self.optim_conf["momentum"],
-                            weight_decay = self.optim_conf["weight_decay"])
+                            lr = self.cd["optimiser"]["lr"],
+                            momentum = self.cd["optimiser"]["momentum"],
+                            weight_decay = self.cd["optimiser"]["weight_decay"])
         else:
             print("Undefined Optimiser")
 

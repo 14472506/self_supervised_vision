@@ -3,7 +3,7 @@ Detials
 """
 # imports 
 from .dataset import RotNetDataset, JigsawDataset
-
+from .augmentation_wrappers import jigsaw_test_augmentations, jigsaw_train_augmentations, JigsawWrapper, rotation_test_augmentations, rotation_train_augmentations, RotNetWrapper
 import torch
 import numpy as np
 import random
@@ -13,30 +13,30 @@ class DataHandler():
     """
     Detials
     """
-    def __init__(self, root, dataset_flag, seed=42, train_test_split=0.8, train_val_split=0.8):
+    def __init__(self, conf_dict, seed=42):
         """
         Detials
         """
         # initialising torch generator and setting random seed
+        self.cd = conf_dict
         self.gen = torch.Generator()
         self.gen.manual_seed(seed)
 
         # attributes
-        self.root = root
-        self.seed = seed
-        self.train_test_split = train_test_split
-        self.train_val_split = train_val_split
-        self.dataset_flag = dataset_flag
+        self.train_test_split = self.cd["data"]["tt_split"]
+        self.train_val_split = self.cd["data"]["tv_split"]
 
     def load_dataset(self):
         """
         Detials
         """
         # getting base dataset
-        if self.dataset_flag == "RotNet":
-            base_dataset = RotNetDataset(self.root)
-        elif self.dataset_flag == "Jigsaw":
-            base_dataset = JigsawDataset(self.root, num_tiles=4, num_permutations=24)
+        if self.cd["model"]["name"] == "RotNet":
+            base_dataset = RotNetDataset(self.cd["data"]["path"])
+        elif self.cd["model"]["name"] == "Jigsaw":
+            base_dataset = JigsawDataset(self.cd["data"]["path"],
+                num_tiles=self.cd["model"]["num_tiles"],
+                num_permutations=self.cd["model"]["permutations"])
         else:
             print("Dataset Not Specified")
 
@@ -50,6 +50,18 @@ class DataHandler():
         validation_size = len(train_base) - train_size
         train, validation = torch.utils.data.random_split(train_base, [train_size, validation_size])
 
+            # getting base dataset
+        if self.cd["model"]["name"] == "RotNet":
+            train = RotNetWrapper(train, rotation_train_augmentations())
+            test = RotNetWrapper(test, rotation_test_augmentations())
+            validation =  RotNetWrapper(validation, rotation_test_augmentations()) 
+        elif self.cd["model"]["name"] == "Jigsaw":
+            train = JigsawWrapper(train, jigsaw_train_augmentations())
+            test = JigsawWrapper(test, jigsaw_test_augmentations())
+            validation =  JigsawWrapper(validation, jigsaw_test_augmentations()) 
+        else:
+            print("Dataset Not Specified")
+
         # returing train, test, and validation datasets
         return train, test, validation
 
@@ -62,25 +74,25 @@ class DataHandler():
 
         # training data_loader
         train_loader = torch.utils.data.DataLoader(train,
-                            batch_size = 8,
-                            shuffle = True,
-                            num_workers = 8,
+                            batch_size = self.cd["data"]["train_loader"]["batch_size"],
+                            shuffle = self.cd["data"]["train_loader"]["shuffle"],
+                            num_workers = self.cd["data"]["train_loader"]["num_workers"],
                             worker_init_fn = self.seed_worker,
                             generator = self.gen)
 
         # testing data_laoder
         test_loader = torch.utils.data.DataLoader(test,
-                            batch_size = 1,
-                            shuffle = False,
-                            num_workers = 1,
+                            batch_size = self.cd["data"]["test_loader"]["batch_size"],
+                            shuffle = self.cd["data"]["test_loader"]["shuffle"],
+                            num_workers = self.cd["data"]["test_loader"]["num_workers"],
                             worker_init_fn = self.seed_worker,
                             generator = self.gen)
 
         # validation data_laoder
         validation_loader = torch.utils.data.DataLoader(validation,
-                            batch_size = 1,
-                            shuffle = False,
-                            num_workers = 1,
+                            batch_size = self.cd["data"]["validation_loader"]["batch_size"],
+                            shuffle = self.cd["data"]["validation_loader"]["shuffle"],
+                            num_workers = self.cd["data"]["validation_loader"]["num_workers"],
                             worker_init_fn = self.seed_worker,
                             generator = self.gen)
 

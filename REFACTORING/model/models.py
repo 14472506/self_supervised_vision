@@ -12,11 +12,11 @@ class RotNet(ModelBase):
     """
     Detials
     """
-    def __init__(self, pre_trained=True, num_rotations=4, dropout_rate=0.5, batch_norm=True):
+    def __init__(self, conf_dict, num_rotations=4, dropout_rate=0.5, batch_norm=True):
         """
         Detials
         """
-        super().__init__(pre_trained=pre_trained)
+        super().__init__(conf_dict)
 
         self.classifier = nn.Sequential(nn.Dropout() if dropout_rate > 0. else nn.Identity(),
                                 nn.Linear(1000, 4096, bias=False if batch_norm else True),
@@ -43,11 +43,11 @@ class Jigsaw(ModelBase):
     """
     Details
     """
-    def __init__(self, pre_trained=True, num_tiles=9, num_permutations=10):
+    def __init__(self, conf_dict, num_tiles=9, num_permutations=10):
         """
         Detials
         """
-        super().__init__(pre_trained=pre_trained)
+        super().__init__(conf_dict)
 
         self.num_tiles = num_tiles
 

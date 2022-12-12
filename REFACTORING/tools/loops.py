@@ -2,6 +2,9 @@
 Detials
 """
 # imports 
+from logger import training_print_out
+from matplotlib import pyplot as plt
+
 import torch
 
 # functions 
@@ -23,7 +26,7 @@ def classification_training_loop(epoch, count, model, train_loader, device, opti
         x, y_gt = x.to(device), y_gt.to(device)
 
         # reset gradient
-        optimiser.zero_grad
+        optimiser.zero_grad()
 
         # forward + backward + optimizer_step
         y_pred = model(x)
@@ -31,18 +34,8 @@ def classification_training_loop(epoch, count, model, train_loader, device, opti
         loss.backward()
         optimiser.step()
 
-        # print stats
-        running_loss += loss.item()
-        acc_loss += loss.item()
-        if i % print_freque == print_freque-1:
-            # get GPU memory usage
-            mem_all = torch.cuda.memory_allocated(device) / 1024**3 
-            mem_res = torch.cuda.memory_reserved(device) / 1024**3 
-            mem = mem_res + mem_all
-            mem = round(mem, 2)
-            print("[epoch: %s][iter: %s][memory use: %sGB] total_loss: %s" %(epoch, count, mem, running_loss/print_freque))
-            
-            running_loss = 0
+        running_loss, acc_loss = training_print_out(running_loss, acc_loss, loss, print_freque,
+                                    device, i, epoch, count)
 
         count += 1
 
