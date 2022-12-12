@@ -78,11 +78,11 @@ class Training_loop():
         self.load_dataset()
 
         # getting model
-        #self.model = JigsawClassifier(pre_trained=cd['MODEL']['PRE_TRAINED'],
-        #                              num_tiles=9,
-        #                              num_permutations=100)#,
+        self.model = JigsawClassifier(pre_trained=cd['MODEL']['PRE_TRAINED'],
+                                      num_tiles=9,
+                                      num_permutations=100)#,
         #                            #(num_rotations=cd['MODEL']['NUM_ROTATIONS'])
-        self.model = ContextEncoder(target_size=(1080, 1080))
+        #self.model = ContextEncoder(target_size=(1080, 1080))
         self.model.to(self.device)
 
         # optimizer config
@@ -136,10 +136,10 @@ class Training_loop():
 
         # get base dataset
         #self.base_set = RotationDataset(root=self.root, seed=self.seed)
-        #self.base_set = JigsawDataset(root=self.root,
-        #                              num_tiles=9,
-        #                              num_permutations=100)
-        self.base_set = ContextEncDataset(root=self.root, mask_method='random_blocks') 
+        self.base_set = JigsawDataset(root=self.root,
+                                      num_tiles=9,
+                                      num_permutations=100)
+        #self.base_set = ContextEncDataset(root=self.root, mask_method='random_blocks') 
         
         # get train and validation dataset
         train_size = int(len(self.base_set)*split_percentage)
@@ -154,9 +154,9 @@ class Training_loop():
         #self.val_set = val_base
         #self.test_set = test_base
 
-        self.train_set = ContextEncTrainAugMapper(train_base, self.train_augs)
-        self.val_set = ContextEncTrainAugMapper(val_base, self.setup_augs)
-        self.test_set = ContextEncTrainAugMapper(test_base, self.setup_augs)
+        self.train_set = JigsawTrainAugMapper(train_base, self.train_augs)
+        self.val_set = JigsawTrainAugMapper(val_base, self.setup_augs)
+        self.test_set = JigsawTrainAugMapper(test_base, self.setup_augs)
         
         self.train_loader = torch.utils.data.DataLoader(self.train_set,
                                                         batch_size = self.train_batch_size,
@@ -179,7 +179,7 @@ class Training_loop():
                                                 worker_init_fn = seed_worker,
                                                 generator = gen)
     
-
+        print(len(self.train_loader))
     def optimizer_init(self):
         """
         Details
@@ -260,9 +260,9 @@ class Training_loop():
         for i, data in enumerate(self.train_loader, 0):
                 
             # get data from loader and send it to device
-            x, y, mask = data
+            x, y = data
             #input = input.float()
-            x, y, mask = x.to(self.device), y.to(self.device), mask.to(self.device)
+            x, y = x.to(self.device), y.to(self.device)
             #print(labels)
 
             # set param gradient to zero
@@ -320,9 +320,9 @@ class Training_loop():
             #inputs, labels = inputs.to(self.device), labels.to(self.device)
 
             # get data from loader and send it to device
-            x, y, mask = data
+            x, y = data
             #input = input.float()
-            x, y, mask = x.to(self.device), y.to(self.device), mask.to(self.device)
+            x, y = x.to(self.device), y.to(self.device)
             #print(labels)
 
             # with torch no grad get output from model
@@ -331,7 +331,7 @@ class Training_loop():
             
             # get loss and add it to loss accumulator
             #loss = classification_loss(output, labels)
-            loss = reconstruction_loss(output, y)
+            loss = classification_loss(output, y)
             loss_acc += loss.item()
 
         # calculate and return validation loss
