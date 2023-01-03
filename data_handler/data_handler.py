@@ -2,7 +2,7 @@
 Detials
 """
 # imports 
-from .dataset import RotNetDataset, JigsawDataset
+from .dataset import RotNetDataset, JigsawDataset, JigRotDataset
 from .augmentation_wrappers import jigsaw_test_augmentations, jigsaw_train_augmentations, JigsawWrapper, rotation_test_augmentations, rotation_train_augmentations, RotNetWrapper
 import torch
 import numpy as np
@@ -37,6 +37,13 @@ class DataHandler():
             base_dataset = JigsawDataset(self.cd["data"]["path"],
                 num_tiles=self.cd["model"]["num_tiles"],
                 num_permutations=self.cd["model"]["permutations"])
+        elif self.cd["model"]["name"] == "JigRot":
+            base_dataset = JigRotDataset(self.cd["data"]["path"],
+                num_tiles=self.cd["model"]["num_tiles"],
+                num_perms=self.cd["model"]["permutations"],
+                num_rotations=self.cd["model"]["rotations"],
+                tile_rotations=self.cd["model"]["tile_rotations"]
+                )
         else:
             print("Dataset Not Specified")
 

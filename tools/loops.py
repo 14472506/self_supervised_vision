@@ -25,9 +25,6 @@ def classification_training_loop(epoch, count, model, train_loader, device, opti
         x, y_gt = data
         x, y_gt = x.to(device), y_gt.to(device)
 
-        # reset gradient
-        optimiser.zero_grad()
-
         # forward + backward + optimizer_step
         y_pred = model(x)
         loss = criterion(y_pred, y_gt)
@@ -36,6 +33,9 @@ def classification_training_loop(epoch, count, model, train_loader, device, opti
 
         running_loss, acc_loss = training_print_out(running_loss, acc_loss, loss, print_freque,
                                     device, i, epoch, count)
+        
+        # reset gradient
+        optimiser.zero_grad()
 
         count += 1
 

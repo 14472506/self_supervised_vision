@@ -91,7 +91,7 @@ class TrainingLoop():
         best_model = 100
 
         # looping through epochs
-        for epoch in range(self.cd["loop"]["start_epoch"], self.cd["loop"]["end_epoch"], 1):
+        for epoch in range(self.cd["loop"]["start_epoch"], self.cd["loop"]["end_epoch"], 1): 
             # train one epoch
             epoch_training_loss, self.count = self.train_one_epoch(epoch, self.count, self.model,
                                                     self.train_loader, self.device, self.optimiser,

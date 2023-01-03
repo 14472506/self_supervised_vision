@@ -16,6 +16,7 @@ import torchvision.transforms as torch_trans
 import torch.nn.functional as torch_fun
 import numpy as np
 import os
+import random as r
 from PIL import Image
 import torch
 
@@ -176,6 +177,141 @@ class JigsawDataset(BaseDataset):
         # return tiles and ground truth label
         return tiles, label 
         
+    def __len__(self):
+        """
+        Details
+        """
+        return len(self.images)
+
+class JigRotDataset(BaseDataset):
+    """
+    Detials
+    """
+    # From jigsaw the set needs:
+    #   - num perms 
+    #   - num tiles
+    # From rotnet the set needs:
+    #   - num rotations
+    #   
+    def __init__(self, root, seed=42, num_tiles=9, num_perms=100,
+                 buffer=True, num_rotations=4, tile_rotations=4):
+        """
+        Detials
+        """
+        super().__init__(root, seed)
+
+        # jigsaw params
+        self.num_permutations = num_perms
+        self.num_tiles = num_tiles
+        self.buffer = buffer
+        self.permutations = jigsaw_permuatations(str(num_perms))
+
+        # rotnet params
+        self.num_rotations = 4
+        self.rotation_degrees = np.linspace(0, 360, num_rotations + 1).tolist()[:-1]
+
+        # rotjig params
+        self.tile_rotations = tile_rotations
+
+    def __getitem__(self, idx):
+        """
+        Detials
+        """
+        # ----- setup
+        # Getting image from source and converting it to square image tile
+        img_path = os.path.join(self.root, self.images[idx]) # load image
+        image = Image.open(img_path).convert("RGB")          # to RGB
+        image = basic_square_crop(image)                     # Basic square crop
+        image = resize(image)                                # resizing
+
+        # transform image to tensor image
+        tensor_transform = torch_trans.Compose([torch_trans.ToTensor()])  
+        image_tensor = tensor_transform(image)
+
+        # ----- first stage, implement the jigsaw dataloader
+        # init parameters for jigsaw dataloader
+        width, _= image.size                                        # get width
+        num_tiles_per_dimension = int(np.sqrt(self.num_tiles))      # get tiles per xy of image
+        tile_length = width // num_tiles_per_dimension              # get tile length
+        tiles = []                                                  # init tile list
+        buffer = int(tile_length * 0.1)                             # buffer value
+
+        # slicing image into tiles
+        for i in range(num_tiles_per_dimension):
+            for j in range(num_tiles_per_dimension):
+                if self.buffer: # if buffer is true
+                    tile_ij = torch.empty(image_tensor.shape[0], 
+                                        tile_length - buffer,
+                                        tile_length - buffer)                           # init blank tensor tile
+                    buffer_x1, buffer_x2 = np.random.multinomial(buffer, [0.5, 0.5])    # random x buffer  
+                    buffer_y1, buffer_y2 = np.random.multinomial(buffer, [0.5, 0.5])    # ramdom y buffer
+                    tile_x1 = i * tile_length + buffer_x1                               # get left tile point 
+                    tile_x2 = (i + 1) * tile_length - buffer_x2                         # get right tile point
+                    tile_y1 = j * tile_length + buffer_y1                               # get top tile point
+                    tile_y2 = (j + 1) * tile_length - buffer_y2                         # get bottom tile point
+                    tile_ij = image_tensor[:, tile_x1: tile_x2, tile_y1: tile_y2]       # add tile to blank tensor
+                else: # if buffer is false
+                    tile_ij = image_tensor[:,
+                                i * tile_length: (i + 1) * tile_length,
+                                j * tile_length: (j + 1) * tile_length] # left to right, top to bottom
+                tiles.append(tile_ij) # appending tile to tiles list
+        
+        # convert tiles list to tensor
+        tiles = torch.stack(tiles)
+
+        # shuffle and generate ground truth
+        perm_idx = np.random.randint(0, self.num_permutations) # gen perm index
+        perm = torch.tensor(self.permutations[perm_idx])       # select perumtation
+        tiles[:,:,:,:] = tiles[perm,:,:,:]                     # apply permutations
+        jig_label = torch.zeros(self.num_permutations)             # gen list of 0
+        jig_label[perm_idx] = 1                                    # set perm idx to 1
+
+        # ----- Applying rotations to tiles 
+        # Generating rotations list
+        rotations_list = [0.0] * self.num_tiles
+        rand_rotations = np.random.choice(self.rotation_degrees, size=self.tile_rotations).tolist() 
+        thetas = np.random.choice(self.rotation_degrees, size=self.tile_rotations).tolist()
+        rand_idx = r.sample(range(0, self.num_tiles), self.tile_rotations)
+        for i in range(self.tile_rotations):
+            rotations_list[rand_idx[i]] = thetas[i]
+
+        # Rotating tiles based on rotations list
+        for i in range(0, self.num_tiles):
+            if rotations_list[i] != 0.0:
+                tile = tiles[i]
+                rot_tile = self.rotate_image(tile.unsqueeze(0), rotations_list[i]).squeeze(0)
+                tiles[i] = rot_tile
+        
+        rot_label = torch.FloatTensor(rotations_list)
+
+        # TESTING WITH NO GT
+        return tiles, jig_label, rot_label
+            
+    def rotate_image(self, image_tensor, theta):
+        """
+        Detials
+        """
+        # get tensor image data type
+        dtype = image_tensor.dtype
+
+        # covert degrees to radians and converting to tensor
+        theta *= np.pi/180
+        theta = torch.tensor(theta)
+
+        # retrieveing rotation matrix around the z axis
+        rotation_matrix = torch.tensor([[torch.cos(theta), -torch.sin(theta), 0],
+                                        [torch.sin(theta), torch.cos(theta), 0]])
+        rotation_matrix = rotation_matrix[None, ...].type(dtype).repeat(image_tensor.shape[0], 1, 1)
+        
+        # appling rotation
+        grid = torch_fun.affine_grid(rotation_matrix,
+                                     image_tensor.shape,
+                                     align_corners=True).type(dtype)
+        rotated_torch_image = torch_fun.grid_sample(image_tensor, grid, align_corners=True)
+
+        # returning rotated image tensor
+        return rotated_torch_image
+
     def __len__(self):
         """
         Details

@@ -2,7 +2,7 @@
 "model": {
     "name": "Jigsaw",
     "backbone": "pre_trained",
-    "load_model": "blank",
+    "load_model": "outputs/RotNet_base/best_model.pth",
     "num_tiles": 9,
     "permutations": 100},
 "data": {
@@ -10,7 +10,7 @@
     "tt_split": 0.8,
     "tv_split": 0.8,
     "train_loader": {
-        "batch_size": 4,
+        "batch_size": 8,
         "shuffle": true,
         "num_workers": 8
     },
@@ -31,10 +31,10 @@
     },
 "loop":{
     "start_epoch": 0,
-    "end_epoch": 3
+    "end_epoch": 50
     },
 "logging": {
-    "experiment_name": "RotNet_test",
+    "experiment_name": "Jigsaw_base",
     "print_freque": 20
     }
 }

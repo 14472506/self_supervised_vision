@@ -1,8 +1,8 @@
 {
 "model": {
     "name": "RotNet",
-    "backbone": "pre_trained",
-    "load_model": "blank",
+    "backbone": "load",
+    "load_model": "outputs/Jigsaw_base/best_model.pth",
     "rotations": 4,
     "dropout": 0.5,
     "batch_norm": true},
@@ -32,10 +32,10 @@
     },
 "loop":{
     "start_epoch": 0,
-    "end_epoch": 3
+    "end_epoch": 50
     },
 "logging": {
-    "experiment_name": "RotNet_test",
+    "experiment_name": "RotNet_Jig_pt",
     "print_freque": 20
     }
 }
