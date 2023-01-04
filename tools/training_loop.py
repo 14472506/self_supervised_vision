@@ -8,8 +8,9 @@ import os
 import torch
 
 from data_handler import DataHandler
-from model import rotnet_setup, jigsaw_setup
-from .loops import classification_training_loop, classification_validation_loop
+from model import rotnet_setup, jigsaw_setup, jigrot_setup
+#from .loops import classification_training_loop, classification_validation_loop
+from .loops import multiclass_training_loop, multiclass_validation_loop
 from saver import model_saver
 from logger import recorder_dict, save_config, save_records
 
@@ -39,8 +40,10 @@ class TrainingLoop():
         self.print_freque = self.cd["logging"]["print_freque"]
 
         # loading training loops
-        self.train_one_epoch = classification_training_loop
-        self.validate_one_epoch = classification_validation_loop
+        #self.train_one_epoch = classification_training_loop
+        #self.validate_one_epoch = classification_validation_loop
+        self.train_one_epoch = multiclass_training_loop
+        self.validate_one_epoch = multiclass_validation_loop
 
         # initialising saving
         self.recording = recorder_dict()
@@ -63,6 +66,8 @@ class TrainingLoop():
             model, optimiser, criterion = rotnet_setup(self.cd)
         elif self.cd["model"]["name"] == "Jigsaw":
             model, optimiser, criterion = jigsaw_setup(self.cd)
+        elif self.cd["model"]["name"] == "JigRot":
+            model, optimiser, criterion = jigrot_setup(self.cd)
         else:
             print("Model Not Specified")
 
@@ -129,6 +134,8 @@ class TrainingLoop():
             # printing loop results
             print("training results: ", epoch_training_loss, "val results: ", epoch_validation_loss)
 
+        pass
+    
         # save records
         save_records(self.recording, self.cd)
         print("training complete")

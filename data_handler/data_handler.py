@@ -40,7 +40,7 @@ class DataHandler():
         elif self.cd["model"]["name"] == "JigRot":
             base_dataset = JigRotDataset(self.cd["data"]["path"],
                 num_tiles=self.cd["model"]["num_tiles"],
-                num_perms=self.cd["model"]["permutations"],
+                num_perms=self.cd["model"]["num_perms"],
                 num_rotations=self.cd["model"]["rotations"],
                 tile_rotations=self.cd["model"]["tile_rotations"]
                 )
