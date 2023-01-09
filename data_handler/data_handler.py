@@ -3,7 +3,7 @@ Detials
 """
 # imports 
 from .dataset import RotNetDataset, JigsawDataset, JigRotDataset
-from .augmentation_wrappers import jigsaw_test_augmentations, jigsaw_train_augmentations, JigsawWrapper, rotation_test_augmentations, rotation_train_augmentations, RotNetWrapper
+from .augmentation_wrappers import jigsaw_test_augmentations, jigsaw_train_augmentations, JigsawWrapper, rotation_test_augmentations, rotation_train_augmentations, RotNetWrapper, JigRotWrapper
 import torch
 import numpy as np
 import random
@@ -66,6 +66,10 @@ class DataHandler():
             train = JigsawWrapper(train, jigsaw_train_augmentations())
             test = JigsawWrapper(test, jigsaw_test_augmentations())
             validation =  JigsawWrapper(validation, jigsaw_test_augmentations()) 
+        elif self.cd["model"]["name"] == "JigRot":
+            train = JigRotWrapper(train, jigsaw_train_augmentations())
+            test = JigRotWrapper(test, jigsaw_test_augmentations())
+            validation =  JigRotWrapper(validation, jigsaw_test_augmentations()) 
         else:
             print("Dataset Not Specified")
 

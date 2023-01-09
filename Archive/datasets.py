@@ -64,7 +64,10 @@ class RotationDataset(data.Dataset):
 
         theta = np.random.choice(self.rotation_degrees, size=1)[0]
         out_img = self.rotate_image(torch_img.unsqueeze(0), theta=theta).squeeze(0)
-        label = torch.tensor(self.rotation_degrees.index(theta)).long()
+        #label = torch.tensor(self.rotation_degrees.index(theta)).long()
+    
+        label = torch.zeros(self.num_rotations)
+        label[self.rotation_degrees.index(theta)] = 1
         
         return out_img, label
     

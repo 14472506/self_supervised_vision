@@ -26,7 +26,11 @@ class RotNet(ModelBase):
                                 nn.Linear(4096, 4096, bias=False if batch_norm else True),
                                 nn.BatchNorm1d(4096) if batch_norm else nn.Identity(),
                                 nn.ReLU(inplace=True),
-                                nn.Linear(4096, num_rotations))
+                                nn.Dropout() if dropout_rate > 0. else nn.Identity(),
+                                nn.Linear(4096, 1000, bias=False if batch_norm else True),
+                                nn.BatchNorm1d(1000) if batch_norm else nn.Identity(),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(1000, num_rotations))
 
                 # Remove any potential nn.Identity() layers
         self.classifier = nn.Sequential(*[child for child in self.classifier.children() if not isinstance(child, nn.Identity)])
@@ -98,7 +102,7 @@ class JigRot(ModelBase):
                                 nn.Linear(4096*self.num_tiles, 4096, bias=False if batch_norm else True),
                                 nn.BatchNorm1d(4096) if batch_norm else nn.Identity(),
                                 nn.ReLU(inplace=True),
-                                nn.Linear(4096, self.num_tiles))
+                                nn.Linear(4096, self.num_permutations))
         self.rot_classifier2 = nn.Sequential(*[child for child in self.rot_classifier2.children() if not isinstance(child, nn.Identity)])
         
         # ----- Jigsaw classifier head

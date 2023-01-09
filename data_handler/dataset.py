@@ -10,7 +10,7 @@ edited by   : bradley hurst
 """
 # import 
 from base import BaseDataset
-from .utils import basic_square_crop, resize, jigsaw_permuatations
+from .utils import basic_square_crop, resize, jigsaw_permuatations, jigrot_perm
 
 import torchvision.transforms as torch_trans
 import torch.nn.functional as torch_fun
@@ -31,6 +31,8 @@ class RotNetDataset(BaseDataset):
         """
         super().__init__(root, seed)
         self.rotation_degrees = np.linspace(0, 360, num_rotations + 1).tolist()[:-1]
+        self.num_rotations = num_rotations
+        self.seed = seed
 
     def __getitem__(self, idx):
         """
@@ -55,7 +57,10 @@ class RotNetDataset(BaseDataset):
         # select random rotation
         theta = np.random.choice(self.rotation_degrees, size=1)[0]
         rotated_image_tensor = self.rotate_image(image_tensor.unsqueeze(0), theta).squeeze(0)
-        label = torch.tensor(self.rotation_degrees.index(theta)).long()
+        #label = torch.tensor(self.rotation_degrees.index(theta)).long()
+
+        label = torch.zeros(self.num_rotations)
+        label[self.rotation_degrees.index(theta)] = 1
 
         # returning rotated image tensor and label
         return rotated_image_tensor, label
@@ -165,6 +170,7 @@ class JigsawDataset(BaseDataset):
                
         # randomly shuffle tiles
         y = []
+
         permutation_index = np.random.randint(0, self.num_permutations)
         permutation = torch.tensor(self.permutations[permutation_index])
         tiles[:, :, :, :] = tiles[permutation, :, :, :]
@@ -209,6 +215,7 @@ class JigRotDataset(BaseDataset):
         # rotnet params
         self.num_rotations = 4
         self.rotation_degrees = np.linspace(0, 360, num_rotations + 1).tolist()[:-1]
+        self.rot_perms = jigrot_perm()
 
         # rotjig params
         self.tile_rotations = tile_rotations
@@ -222,7 +229,7 @@ class JigRotDataset(BaseDataset):
         img_path = os.path.join(self.root, self.images[idx]) # load image
         image = Image.open(img_path).convert("RGB")          # to RGB
         image = basic_square_crop(image)                     # Basic square crop
-        image = resize(image)                                # resizing
+        image = resize(image, size = 500)                                # resizing
 
         # transform image to tensor image
         tensor_transform = torch_trans.Compose([torch_trans.ToTensor()])  
@@ -258,7 +265,7 @@ class JigRotDataset(BaseDataset):
         
         # convert tiles list to tensor
         tiles = torch.stack(tiles)
-
+       
         # shuffle and generate ground truth
         perm_idx = np.random.randint(0, self.num_permutations) # gen perm index
         perm = torch.tensor(self.permutations[perm_idx])       # select perumtation
@@ -268,21 +275,27 @@ class JigRotDataset(BaseDataset):
 
         # ----- Applying rotations to tiles 
         # Generating rotations list
-        rotations_list = [0.0] * self.num_tiles
-        rand_rotations = np.random.choice(self.rotation_degrees, size=self.tile_rotations).tolist() 
-        thetas = np.random.choice(self.rotation_degrees, size=self.tile_rotations).tolist()
-        rand_idx = r.sample(range(0, self.num_tiles), self.tile_rotations)
-        for i in range(self.tile_rotations):
-            rotations_list[rand_idx[i]] = thetas[i]
+        #rotations_list = [0.0] * self.num_tiles
+        #rand_rotations = np.random.choice(self.rotation_degrees, size=self.tile_rotations).tolist() 
+        #thetas = np.random.choice(self.rotation_degrees, size=self.tile_rotations).tolist()
+        #rand_idx = r.sample(range(0, self.num_tiles), self.tile_rotations)
+        #for i in range(self.tile_rotations):
+        #    rotations_list[rand_idx[i]] = thetas[i]
+
+        jr_perm_idx = np.random.randint(0, self.num_permutations)
+        jr_perm = self.rot_perms[jr_perm_idx]
+        jr_lookput = [0.0, 90.0, 180.0, 270.0]
+        rotations_list = [jr_lookput[i] for i in jr_perm]
 
         # Rotating tiles based on rotations list
         for i in range(0, self.num_tiles):
-            if rotations_list[i] != 0.0:
-                tile = tiles[i]
-                rot_tile = self.rotate_image(tile.unsqueeze(0), rotations_list[i]).squeeze(0)
-                tiles[i] = rot_tile
+            tile = tiles[i]
+            rot_tile = self.rotate_image(tile.unsqueeze(0), rotations_list[i]).squeeze(0)
+            tiles[i] = rot_tile
         
-        rot_label = torch.FloatTensor(rotations_list)
+        out_list = [0] * 100
+        out_list[jr_perm_idx] = 1
+        rot_label = torch.FloatTensor(out_list)
 
         # TESTING WITH NO GT
         return tiles, jig_label, rot_label

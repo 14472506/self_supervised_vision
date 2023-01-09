@@ -135,10 +135,10 @@ class Training_loop():
         gen.manual_seed(seed)
 
         # get base dataset
-        #self.base_set = RotationDataset(root=self.root, seed=self.seed)
-        self.base_set = JigsawDataset(root=self.root,
-                                      num_tiles=9,
-                                      num_permutations=100)
+        self.base_set = RotationDataset(root=self.root, seed=self.seed)
+        #self.base_set = JigsawDataset(root=self.root,
+        #                              num_tiles=9,
+        #                              num_permutations=100)
         #self.base_set = ContextEncDataset(root=self.root, mask_method='random_blocks') 
         
         # get train and validation dataset
@@ -263,7 +263,7 @@ class Training_loop():
             x, y = data
             #input = input.float()
             x, y = x.to(self.device), y.to(self.device)
-            #print(labels)
+            print(y)
 
             # set param gradient to zero
             self.optimizer.zero_grad()

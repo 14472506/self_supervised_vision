@@ -10,7 +10,7 @@
     "tt_split": 0.8,
     "tv_split": 0.8,
     "train_loader": {
-        "batch_size": 8,
+        "batch_size": 2,
         "shuffle": true,
         "num_workers": 8
     },
@@ -34,7 +34,7 @@
     "end_epoch": 50
     },
 "logging": {
-    "experiment_name": "Jigsaw_base",
+    "experiment_name": "Jigsaw_TEST",
     "print_freque": 20
     }
 }

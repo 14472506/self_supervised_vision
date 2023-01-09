@@ -60,6 +60,7 @@ class JigsawClassifier(nn.Module):
 
         x = torch.stack([self.twin_network(self.backbone(tile)) for tile in x]).to(device)
         x = torch.flatten(x, start_dim = 1)
+        print(x.shape)
         x = self.classifier(x)
 
         return x
