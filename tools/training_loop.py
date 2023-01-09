@@ -177,7 +177,7 @@ class TrainingLoop():
                 if val_loop_data["y1_loss"] < best_model_comb[1]:
                     self.recording["best_comb_epoch"].append(epoch)
                     self.recording["best_comb_train_loss"].append([train_loop_data["y1_loss"], train_loop_data["y2_loss"]])
-                    self.recording["best_comb_val_loss"].append([val_loop_data["y1_loss"], val_loop_data["y2_loss"]])
+                    self.recording["best_comb_validation_loss"].append([val_loop_data["y1_loss"], val_loop_data["y2_loss"]])
                     model_saver("outputs/" + self.cd["logging"]["experiment_name"],
                          "best_comb_model.pth",
                          epoch,
@@ -216,13 +216,13 @@ class TrainingLoop():
                          epoch,
                          self.model, 
                          self.optimiser)
-                    best_model_comb_acc[0] = val_loop_data["y1_acc"]
-                    best_model_comb_acc[1] = val_loop_data["y2_acc"]       
+                    best_model_acc_comb[0] = val_loop_data["y1_acc"]
+                    best_model_acc_comb[1] = val_loop_data["y2_acc"]       
             
             
             #######################################################################################
             ## printing loop results
-            print("training results: ", epoch_training_loss, "val results: ", epoch_validation_loss)
+            print("training results: ", train_loop_data["total_loss"], "val results: ", val_loop_data["total_loss"])
 
         # save records
         save_records(self.recording, self.cd)
