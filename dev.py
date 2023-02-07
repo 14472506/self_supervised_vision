@@ -1,11 +1,5 @@
-from tools import TrainingLoop
-import torch
-import json 
+import random
 
-from saver import backbone_loader
+a = [0] * 100
 
-with open("config/RotNet_config.json", "r") as f:
-    conf_dict = json.load(f)
-
-loop = TrainingLoop(conf_dict)
-loop.loop()
+print(a)

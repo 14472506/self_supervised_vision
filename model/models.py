@@ -26,7 +26,11 @@ class RotNet(ModelBase):
                                 nn.Linear(4096, 4096, bias=False if batch_norm else True),
                                 nn.BatchNorm1d(4096) if batch_norm else nn.Identity(),
                                 nn.ReLU(inplace=True),
-                                nn.Linear(4096, num_rotations))
+                                nn.Dropout() if dropout_rate > 0. else nn.Identity(),
+                                nn.Linear(4096, 1000, bias=False if batch_norm else True),
+                                nn.BatchNorm1d(1000) if batch_norm else nn.Identity(),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(1000, num_rotations))
 
                 # Remove any potential nn.Identity() layers
         self.classifier = nn.Sequential(*[child for child in self.classifier.children() if not isinstance(child, nn.Identity)])
@@ -70,9 +74,66 @@ class Jigsaw(ModelBase):
         x = torch.flatten(x, start_dim = 1)
         x = self.classifier(x)
 
-
         return x
-    
 
+class JigRot(ModelBase):
+    """
+    Detials
+    """
+    def __init__(self, conf_dict, num_tiles=9, num_permutations=100, num_rotations=4,
+        dropout_rate=0.5, batch_norm=True):
+        """
+        Detials
+        """
+        # init from model base
+        super().__init__(conf_dict)
+        self.num_tiles = num_tiles
+        self.num_rotations = num_rotations
+        self.num_permutations = num_permutations
 
+        # ----- rotation classifier head
+        self.rot_classifier1 = nn.Sequential(nn.Dropout() if dropout_rate > 0. else nn.Identity(),
+                                nn.Linear(1000, 4096, bias=False if batch_norm else True),
+                                nn.BatchNorm1d(4096) if batch_norm else nn.Identity(),
+                                nn.ReLU(inplace=True))
+        self.rot_classifier1 = nn.Sequential(*[child for child in self.rot_classifier1.children() if not isinstance(child, nn.Identity)])
 
+        self.rot_classifier2 = nn.Sequential(nn.Dropout() if dropout_rate > 0. else nn.Identity(),
+                                nn.Linear(4096*self.num_tiles, 4096, bias=False if batch_norm else True),
+                                nn.BatchNorm1d(4096) if batch_norm else nn.Identity(),
+                                nn.ReLU(inplace=True),
+                                nn.Linear(4096, self.num_permutations))
+        self.rot_classifier2 = nn.Sequential(*[child for child in self.rot_classifier2.children() if not isinstance(child, nn.Identity)])
+        
+        # ----- Jigsaw classifier head
+        self.twin_network = nn.Sequential(nn.Linear(1000, 512, bias=False),
+                                          nn.BatchNorm1d(512),
+                                          nn.ReLU(inplace=True))
+        
+        self.classifier = nn.Sequential(nn.Linear(512*self.num_tiles, 4096, bias=False),
+                                         nn.BatchNorm1d(4096),
+                                         nn.ReLU(inplace=True),
+                                         nn.Linear(4096, self.num_permutations))
+
+    def forward(self, x):
+        """
+        Details
+        """
+        assert x.shape[1] == self.num_tiles
+        device = x.device
+
+        # backbone
+        x = torch.stack([self.backbone(tile) for tile in x]).to(device)
+
+        # jigsaw
+        x1 = torch.stack([self.twin_network(tile) for tile in x]).to(device)
+        x1 = torch.flatten(x1, start_dim = 1)
+        x1 = self.classifier(x1)
+
+        # rotnet
+        x2 = torch.stack([self.rot_classifier1(tile)for tile in x]).to(device)
+        x2 = torch.flatten(x2, start_dim = 1)
+        x2 = self.rot_classifier2(x2)
+
+        # returning outputs 1(jig) and 2(rot)
+        return x1, x2

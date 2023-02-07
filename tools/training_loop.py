@@ -8,10 +8,11 @@ import os
 import torch
 
 from data_handler import DataHandler
-from model import rotnet_setup, jigsaw_setup
-from .loops import classification_training_loop, classification_validation_loop
+from model import rotnet_setup, jigsaw_setup, jigrot_setup
+#from .loops import classification_training_loop, classification_validation_loop
+from .loops import multiclass_training_loop, multiclass_validation_loop
 from saver import model_saver
-from logger import recorder_dict, save_config, save_records
+from logger import recorder_dict_multiclass, save_config, save_records
 
 # training class
 class TrainingLoop():
@@ -39,11 +40,13 @@ class TrainingLoop():
         self.print_freque = self.cd["logging"]["print_freque"]
 
         # loading training loops
-        self.train_one_epoch = classification_training_loop
-        self.validate_one_epoch = classification_validation_loop
+        #self.train_one_epoch = classification_training_loop
+        #self.validate_one_epoch = classification_validation_loop
+        self.train_one_epoch = multiclass_training_loop
+        self.validate_one_epoch = multiclass_validation_loop
 
         # initialising saving
-        self.recording = recorder_dict()
+        self.recording = recorder_dict_multiclass()
         save_config(self.cd)
 
     def data_loader(self):
@@ -63,6 +66,8 @@ class TrainingLoop():
             model, optimiser, criterion = rotnet_setup(self.cd)
         elif self.cd["model"]["name"] == "Jigsaw":
             model, optimiser, criterion = jigsaw_setup(self.cd)
+        elif self.cd["model"]["name"] == "JigRot":
+            model, optimiser, criterion = jigrot_setup(self.cd)
         else:
             print("Model Not Specified")
 
@@ -88,46 +93,136 @@ class TrainingLoop():
         Detials
         """
         # init counts
-        best_model = 100
+        # multi or single class model
+        if self.cd["model"]["name"] == "JigRot":
+            best_model_loss = 100
+            best_model_l1_loss = 100
+            best_model_l2_loss = 100
+            best_model_comb = [100, 100]
+            best_model_y1_acc = 0
+            best_model_y2_acc = 0
+            best_model_acc_comb = [0, 0]
 
         # looping through epochs
-        for epoch in range(self.cd["loop"]["start_epoch"], self.cd["loop"]["end_epoch"], 1):
+        for epoch in range(self.cd["loop"]["start_epoch"], self.cd["loop"]["end_epoch"], 1): 
             # train one epoch
-            epoch_training_loss, self.count = self.train_one_epoch(epoch, self.count, self.model,
-                                                    self.train_loader, self.device, self.optimiser,
-                                                    self.criterion,
-                                                    self.print_freque)
+            train_loop_data, self.count = self.train_one_epoch(epoch,
+                                            self.count,
+                                            self.model,
+                                            self.train_loader, self.device, self.optimiser,
+                                            self.criterion,
+                                            self.print_freque)
 
             # val one epoch
-            epoch_validation_loss = self.validate_one_epoch(self.model,
-                                    self.validation_loader,
-                                    self.device,
-                                    self.criterion)
+            val_loop_data = self.validate_one_epoch(self.model,
+                                            self.validation_loader,
+                                            self.device,
+                                            self.criterion)
             
-            # recording loop results)
+            # recording loop results
             self.recording["epoch"].append(epoch)
-            self.recording["training_loss"].append(epoch_training_loss)
-            self.recording["validation_loss"].append(epoch_validation_loss)
+            self.recording["y1_train_acc"].append(train_loop_data["y1_acc"])
+            self.recording["y2_train_acc"].append(train_loop_data["y2_acc"])
+            self.recording["y1_validation_acc"].append(val_loop_data["y1_acc"])
+            self.recording["y2_validation_acc"].append(val_loop_data["y2_acc"])
+            self.recording["training_tot_loss"].append(train_loop_data["total_loss"])
+            self.recording["training_l1_loss"].append(train_loop_data["y1_loss"])
+            self.recording["training_l2_loss"].append(train_loop_data["y2_loss"])
+            self.recording["validation_tot_loss"].append(val_loop_data["total_loss"])
+            self.recording["validation_l1_loss"].append(val_loop_data["y1_loss"])
+            self.recording["validation_l2_loss"].append(val_loop_data["y2_loss"])
+
             model_saver("outputs/" + self.cd["logging"]["experiment_name"],
                  "last_model.pth",
                  epoch,
                  self.model, 
                  self.optimiser)
 
-            # recording best results 
-            if epoch_validation_loss < best_model:
-                self.recording["best_epoch"].append(epoch)
-                self.recording["best_training_loss"].append(epoch_training_loss)
-                self.recording["best_validation_loss"].append(epoch_validation_loss)
+            #######################################################################################
+            # ----- losses ------------------------------------------------------------------------
+            if val_loop_data["total_loss"] < best_model_loss:
+                self.recording["best_tot_epoch"].append(epoch)
+                self.recording["best_tot_training_loss"].append(train_loop_data["total_loss"])
+                self.recording["best_tot_validation_loss"].append(val_loop_data["total_loss"])
                 model_saver("outputs/" + self.cd["logging"]["experiment_name"],
-                     "best_model.pth",
+                     "best_tot_model.pth",
                      epoch,
                      self.model, 
                      self.optimiser)
-                best_model = epoch_validation_loss
+                best_model_loss = val_loop_data["total_loss"]
             
-            # printing loop results
-            print("training results: ", epoch_training_loss, "val results: ", epoch_validation_loss)
+            if val_loop_data["y1_loss"] < best_model_l1_loss:
+                self.recording["best_l1_epoch"].append(epoch)
+                self.recording["best_l1_training_loss"].append(train_loop_data["y1_loss"])
+                self.recording["best_l1_validation_loss"].append(val_loop_data["y1_loss"])
+                model_saver("outputs/" + self.cd["logging"]["experiment_name"],
+                     "best_y1_model.pth",
+                     epoch,
+                     self.model, 
+                     self.optimiser)
+                best_model_l1_loss = val_loop_data["y1_loss"]
+
+            if val_loop_data["y2_loss"] < best_model_l2_loss:
+                self.recording["best_l2_epoch"].append(epoch)
+                self.recording["best_l2_training_loss"].append(train_loop_data["y2_loss"])
+                self.recording["best_l2_validation_loss"].append(val_loop_data["y2_loss"])
+                model_saver("outputs/" + self.cd["logging"]["experiment_name"],
+                     "best_y2_model.pth",
+                     epoch,
+                     self.model, 
+                     self.optimiser)
+                best_model_l2_loss = val_loop_data["y2_loss"]
+
+            if val_loop_data["y1_loss"] < best_model_comb[0]:
+                if val_loop_data["y1_loss"] < best_model_comb[1]:
+                    self.recording["best_comb_epoch"].append(epoch)
+                    self.recording["best_comb_train_loss"].append([train_loop_data["y1_loss"], train_loop_data["y2_loss"]])
+                    self.recording["best_comb_validation_loss"].append([val_loop_data["y1_loss"], val_loop_data["y2_loss"]])
+                    model_saver("outputs/" + self.cd["logging"]["experiment_name"],
+                         "best_comb_model.pth",
+                         epoch,
+                         self.model, 
+                         self.optimiser)
+                    best_model_comb[0] = val_loop_data["y1_loss"]
+                    best_model_comb[1] = val_loop_data["y2_loss"]     
+
+            # ----- Accuracies --------------------------------------------------------------------
+            if val_loop_data["y1_acc"] > best_model_y1_acc:
+                self.recording["best_y1_acc_epoch"].append(epoch)
+                self.recording["best_y1_acc"].append(train_loop_data["y1_acc"])
+                model_saver("outputs/" + self.cd["logging"]["experiment_name"],
+                     "best_y1_acc_model.pth",
+                     epoch,
+                     self.model, 
+                     self.optimiser)
+                best_model_y1_acc = val_loop_data["y1_acc"]
+
+            if val_loop_data["y2_acc"] > best_model_y2_acc:
+                self.recording["best_y2_acc_epoch"].append(epoch)
+                self.recording["best_y2_acc"].append(train_loop_data["y2_acc"])
+                model_saver("outputs/" + self.cd["logging"]["experiment_name"],
+                     "best_y2_acc_model.pth",
+                     epoch,
+                     self.model, 
+                     self.optimiser)
+                best_model_y2_acc = val_loop_data["y2_acc"]
+
+            if val_loop_data["y1_acc"] > best_model_acc_comb[0]:
+                if val_loop_data["y2_acc"] > best_model_acc_comb[1]:
+                    self.recording["best_comb_acc_epoch"].append(epoch)
+                    self.recording["best_comb_acc"].append([val_loop_data["y1_acc"], val_loop_data["y2_acc"]])
+                    model_saver("outputs/" + self.cd["logging"]["experiment_name"],
+                         "best_comb_acc_model.pth",
+                         epoch,
+                         self.model, 
+                         self.optimiser)
+                    best_model_acc_comb[0] = val_loop_data["y1_acc"]
+                    best_model_acc_comb[1] = val_loop_data["y2_acc"]       
+            
+            
+            #######################################################################################
+            ## printing loop results
+            print("training results: ", train_loop_data["total_loss"], "val results: ", val_loop_data["total_loss"])
 
         # save records
         save_records(self.recording, self.cd)

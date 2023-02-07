@@ -2,8 +2,8 @@
 Detials
 """
 # imports 
-from .dataset import RotNetDataset, JigsawDataset
-from .augmentation_wrappers import jigsaw_test_augmentations, jigsaw_train_augmentations, JigsawWrapper, rotation_test_augmentations, rotation_train_augmentations, RotNetWrapper
+from .dataset import RotNetDataset, JigsawDataset, JigRotDataset
+from .augmentation_wrappers import jigsaw_test_augmentations, jigsaw_train_augmentations, JigsawWrapper, rotation_test_augmentations, rotation_train_augmentations, RotNetWrapper, JigRotWrapper
 import torch
 import numpy as np
 import random
@@ -37,6 +37,13 @@ class DataHandler():
             base_dataset = JigsawDataset(self.cd["data"]["path"],
                 num_tiles=self.cd["model"]["num_tiles"],
                 num_permutations=self.cd["model"]["permutations"])
+        elif self.cd["model"]["name"] == "JigRot":
+            base_dataset = JigRotDataset(self.cd["data"]["path"],
+                num_tiles=self.cd["model"]["num_tiles"],
+                num_perms=self.cd["model"]["num_perms"],
+                num_rotations=self.cd["model"]["rotations"],
+                tile_rotations=self.cd["model"]["tile_rotations"]
+                )
         else:
             print("Dataset Not Specified")
 
@@ -59,6 +66,10 @@ class DataHandler():
             train = JigsawWrapper(train, jigsaw_train_augmentations())
             test = JigsawWrapper(test, jigsaw_test_augmentations())
             validation =  JigsawWrapper(validation, jigsaw_test_augmentations()) 
+        elif self.cd["model"]["name"] == "JigRot":
+            train = JigRotWrapper(train, jigsaw_train_augmentations())
+            test = JigRotWrapper(test, jigsaw_test_augmentations())
+            validation =  JigRotWrapper(validation, jigsaw_test_augmentations()) 
         else:
             print("Dataset Not Specified")
 

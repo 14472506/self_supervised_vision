@@ -1,28 +1,32 @@
 {
 "model": {
-    "name": "Jigsaw",
-    "backbone": "pre_trained",
-    "load_model": "outputs/RotNet_base/best_model.pth",
+    "name": "JigRot",
+    "backbone": "pre-trained",
+    "load_model": "outputs/Jigsaw_base/best_model.pth",
     "num_tiles": 9,
-    "permutations": 100},
+    "num_perms": 100,
+    "rotations": 4,
+    "dropout": 0.5,
+    "batch_norm": true,
+    "tile_rotations": 4},
 "data": {
     "path": "data/jersey_royals_ssl_ds",
     "tt_split": 0.8,
     "tv_split": 0.8,
     "train_loader": {
-        "batch_size": 2,
+        "batch_size": 8,
         "shuffle": true,
-        "num_workers": 8
+        "num_workers": 1
     },
     "test_loader": {
         "batch_size": 1,
         "shuffle": false,
-        "num_workers": 8
+        "num_workers": 4
     },
     "validation_loader": {
         "batch_size": 1,
         "shuffle": false,
-        "num_workers": 8
+        "num_workers": 4
         }
     },
 "optimiser": {
@@ -31,10 +35,10 @@
     },
 "loop":{
     "start_epoch": 0,
-    "end_epoch": 50
+    "end_epoch": 2
     },
 "logging": {
-    "experiment_name": "Jigsaw_TEST",
+    "experiment_name": "JigRot_data_test",
     "print_freque": 20
     }
 }
