@@ -9,11 +9,11 @@ class OptimSelector():
     """
     Detials
     """
-    def __init__(self, model_params, conf_dict):
+    def __init__(self, model, conf_dict):
         """
         Details
         """
-        self.model_params = model_params
+        self.model = model
         self.cd = conf_dict
 
     def selector(self):
@@ -21,8 +21,11 @@ class OptimSelector():
         Detials
         """
         if self.cd["optimiser"]["name"] == "Adam":
-            optimizer = optim.Adam(self.model_params,
-                            lr = self.cd["optimiser"]["lr"])
+            optimizer = optim.Adam([{"params": self.model.backbone.parameters()},
+                                    {"params": self.model.rot_classifier.parameters()},
+                                    {"params": self.model.twin_network.parameters()},
+                                    {"params": self.model.classifier.parameters()}],
+                                    lr = self.cd["optimiser"]["lr"])
         elif self.optim_flag == "SGD":
             optimizer = optim.SGD(self.model_params,
                             lr = self.cd["optimiser"]["lr"],

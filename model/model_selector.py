@@ -41,7 +41,7 @@ def jigrot_setup(conf_dict):
                 num_permutations = conf_dict["model"]["num_perms"],
                 num_rotations=conf_dict["model"]["rotations"],
                 )
-    optimiser = OptimSelector(model.parameters(), conf_dict).selector()
+    optimiser = OptimSelector(model, conf_dict).selector()
     criterion = classification_loss
 
     return model, optimiser, criterion

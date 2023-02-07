@@ -224,6 +224,7 @@ class JigRotDataset(BaseDataset):
         """
         Detials
         """
+        np.random.seed(42)
         # ----- setup
         # Getting image from source and converting it to square image tile
         img_path = os.path.join(self.root, self.images[idx]) # load image
@@ -282,23 +283,38 @@ class JigRotDataset(BaseDataset):
         #for i in range(self.tile_rotations):
         #    rotations_list[rand_idx[i]] = thetas[i]
 
-        jr_perm_idx = np.random.randint(0, self.num_permutations)
-        jr_perm = self.rot_perms[jr_perm_idx]
-        jr_lookput = [0.0, 90.0, 180.0, 270.0]
-        rotations_list = [jr_lookput[i] for i in jr_perm]
+        # current ##################################################
 
-        # Rotating tiles based on rotations list
+        #jr_perm_idx = np.random.randint(0, self.num_permutations)
+        #jr_perm = self.rot_perms[jr_perm_idx]
+        #jr_lookput = [0.0, 90.0, 180.0, 270.0]
+        #rotations_list = [jr_lookput[i] for i in jr_perm]
+        #
+        ## Rotating tiles based on rotations list
+        #for i in range(0, self.num_tiles):
+        #    tile = tiles[i]
+        #    rot_tile = self.rotate_image(tile.unsqueeze(0), rotations_list[i]).squeeze(0)
+        #    tiles[i] = rot_tile
+        #
+        #
+        #out_list = [0] * 100
+        #out_list[jr_perm_idx] = 1
+        #rot_label = torch.FloatTensor(out_list)
+
+        ##############################################################
+
+        rot_labels = torch.zeros(self.num_tiles, self.num_rotations)
+
         for i in range(0, self.num_tiles):
             tile = tiles[i]
-            rot_tile = self.rotate_image(tile.unsqueeze(0), rotations_list[i]).squeeze(0)
-            tiles[i] = rot_tile
-        
-        out_list = [0] * 100
-        out_list[jr_perm_idx] = 1
-        rot_label = torch.FloatTensor(out_list)
+            theta = np.random.choice(self.rotation_degrees, size=1)[0]
+            rotated_tile_tensor = self.rotate_image(image_tensor.unsqueeze(0), theta).squeeze(0)
+            loop_label = torch.zeros(self.num_rotations)
+            loop_label[self.rotation_degrees.index(theta)] = 1
+            rot_labels[i] = loop_label
 
         # TESTING WITH NO GT
-        return tiles, jig_label, rot_label
+        return tiles, jig_label, rot_labels
             
     def rotate_image(self, image_tensor, theta):
         """
